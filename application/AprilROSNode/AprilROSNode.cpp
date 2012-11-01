@@ -16,6 +16,7 @@
 #include <sensor_msgs/image_encodings.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <boost/foreach.hpp>
 
 using namespace std;
 using namespace cv;
@@ -94,7 +95,13 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 	detector->process(img, opticalCenter, detections);
 
+	BOOST_FOREACH(TagDetection& detect, detections){
 
+	}
+
+
+
+	//some debugging tools
 #if TAG_DEBUG_DRAW
 	loglni("[TagDetector] process time = "<<PM.toc()<<" sec.");
 
@@ -135,7 +142,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		double thisx = (detector->steptime[i]/total)*imgW+lastx;
 		cv::rectangle(img, cv::Point(lastx,0), cv::Point(thisx,barH), pclut[i], CV_FILLED);
 		lastx = thisx;
-		cv::putText(imgd, cv::format("step %d: %05.3f ms",i+1,detector->steptime[i]),
+		cv::putText(img, cv::format("step %d: %05.3f ms",i+1,detector->steptime[i]),
 				cv::Point(5,lasty-2), CV_FONT_NORMAL, 0.5, pclut[i], 1 );
 		lasty += textH;
 	}
