@@ -5,6 +5,7 @@ INCLUDE_DIRECTORIES(
 	${OPENSCENEGRAPH_INCLUDE_DIRS}
 	${EIGEN3_INCLUDE_DIR}
 	${EIGEN3_INCLUDE_DIR}/unsupported/
+ 	${ESM_HEADER}
 )
 
 # To use all *.cpp, *.hpp files

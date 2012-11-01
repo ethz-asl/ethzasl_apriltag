@@ -3,6 +3,7 @@ INCLUDE_DIRECTORIES(
 	${CMAKE_SOURCE_DIR}/include
 	${CMAKE_CURRENT_BINARY_DIR}
 	${OPENSCENEGRAPH_INCLUDE_DIRS}
+ 	${ESM_HEADER}
 )
 
 # To use all *.cpp, *.hpp files

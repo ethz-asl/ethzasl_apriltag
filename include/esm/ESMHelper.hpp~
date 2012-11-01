@@ -28,7 +28,7 @@
 #ifndef _WIN32 //ESMlibry.lib under windows seems to be compiled as cpp code rather than c code
 extern "C" {
 #endif
-	#include "ESMlibrary.h"
+	#include "ESM_HEADER"
 #ifndef _WIN32
 }
 #endif
