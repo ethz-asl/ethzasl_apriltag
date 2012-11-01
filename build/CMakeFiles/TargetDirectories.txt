@@ -1,0 +1,10 @@
+/home/slynen/Documents/projects/cv2cg/build/application/AprilTagCreator/CMakeFiles/AprilTagCreator.dir
+/home/slynen/Documents/projects/cv2cg/build/application/AprilTagFinder/CMakeFiles/AprilTagFinder.dir
+/home/slynen/Documents/projects/cv2cg/build/application/CameraSimulator/CMakeFiles/CameraSimulator.dir
+/home/slynen/Documents/projects/cv2cg/build/application/DLTCalibrator/CMakeFiles/DLTCalibrator.dir
+/home/slynen/Documents/projects/cv2cg/build/application/FERN/CMakeFiles/FERN.dir
+/home/slynen/Documents/projects/cv2cg/build/application/KEG/CMakeFiles/KEG.dir
+/home/slynen/Documents/projects/cv2cg/build/application/SimpleAR/CMakeFiles/SimpleAR.dir
+/home/slynen/Documents/projects/cv2cg/build/application/SparseRec2View/CMakeFiles/SparseRec2View.dir
+/home/slynen/Documents/projects/cv2cg/build/application/SparseRecMultiView/CMakeFiles/SparseRecMultiView.dir
+/home/slynen/Documents/projects/cv2cg/build/CMakeFiles/uninstall.dir
