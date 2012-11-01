@@ -96,7 +96,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	detector->process(img, opticalCenter, detections);
 
 	BOOST_FOREACH(TagDetection& detect, detections){
-
+//		detect.homography
 	}
 
 
