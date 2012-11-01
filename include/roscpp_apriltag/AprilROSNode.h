@@ -23,17 +23,23 @@
 #include "OpenCVHelper.h"
 #include "Log.h"
 #include <roscpp_apriltag/Params.h>
+#include <Eigen/Dense>
 
 //#define TAG_DEBUG_PERFORMANCE 1
 
 class AprilROSNode {
 private:
-	  ros::NodeHandle nh_, image_nh_;
-	  tf::TransformBroadcaster tf_pub_;
-	  bool first_frame_;
-	  image_transport::Subscriber sub_image_;
+	ros::NodeHandle nh_, image_nh_;
+	tf::TransformBroadcaster tf_pub_;
+	ros::Publisher pub_pose_;
+	bool first_frame_;
+	image_transport::Subscriber sub_image_;
 
-	  void imageCallback(const sensor_msgs::ImageConstPtr & img);
+	void imageCallback(const sensor_msgs::ImageConstPtr & img);
+
+	tf::Vector3 projectionMatrixToTranslationVector(Eigen::Matrix<double, 3, 4>& M);
+	tf::Quaternion projectionMatrixToQuaternion(Eigen::Matrix<double, 3, 4>& M);
+	tf::Transform homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix<double, 3,3> H);
 
 public:
 	AprilROSNode();

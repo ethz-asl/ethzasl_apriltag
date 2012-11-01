@@ -24,6 +24,9 @@ class FixParams
 {
 public:
 	int tagID;
+	double focalLengthX;
+	double focalLengthY;
+	double tagSize;
 	void readFixParams();
 };
 

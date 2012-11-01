@@ -14,7 +14,9 @@ void FixParams::readFixParams()
   ros::NodeHandle nh("~");
 
   nh.param("tagID", tagID, 4);
-
+  nh.param("focalLengthX", focalLengthX, 614.0);
+  nh.param("focalLengthY", focalLengthY, 361.7);
+  nh.param("tagSize", tagSize, 0.04);
 }
 ;
 

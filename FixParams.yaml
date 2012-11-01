@@ -1,4 +1,7 @@
 #APRIL tag params
 tagid: 4 
+tagSize: 0.04
 
 #camera params
+focalLengthX: 614.0
+focalLengthY: 361.7

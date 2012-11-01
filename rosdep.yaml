@@ -1,0 +1,6 @@
+libopenscenegraph-dev:
+  ubuntu: libopenscenegraph-dev
+
+openscenegraph:
+  ubuntu: openscenegraph
+
