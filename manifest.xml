@@ -10,8 +10,15 @@
   <url>http://ros.org/wiki/roscpp_apriltag</url>
   <depend package="roscpp"/>
   <depend package="std_msgs"/>
+
+  <depend package="cv_bridge"/>
+
+  <depend package="sensor_msgs"/>
   <depend package="image_transport"/>
+  <depend package="opencv2"/>
   <depend package="tf"/>
+  <depend package="visualization_msgs"/>
+  <depend package="dynamic_reconfigure"/>
 
   <rosdep name="libopenscenegraph-dev"/>
   <rosdep name="openscenegraph"/>

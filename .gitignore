@@ -10,3 +10,8 @@
 *.lai
 *.la
 *.a
+
+*~
+
+cfg/cpp/
+*.cfgc

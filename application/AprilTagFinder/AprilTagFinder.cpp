@@ -55,6 +55,7 @@
 //#define TAG_DEBUG_PERFORMANCE 1
 #include "apriltag/apriltag.hpp"
 #include "apriltag/TagFamilyFactory.hpp"
+#include "ImageHelper.h"
 
 using namespace std;
 using namespace cv;
@@ -69,6 +70,9 @@ cv::Ptr<TagFamily> tagFamily;
 cv::Ptr<TagDetector> detector;
 
 struct AprilTagprocessor : public ImageHelper::ImageSource::Processor {
+	//slynen{
+	virtual ~AprilTagprocessor(){}
+//}
 /////// Override
 	void operator()(cv::Mat& frame) {
 		static helper::PerformanceMeasurer PM;
@@ -157,16 +161,16 @@ Log::Level Log::level = Log::LOG_INFO;
 int main( int argc, char **argv )
 {
 	if(argc<2) {
-		usage(argc,argv);
-		return -1;
-	}
+			usage(argc,argv);
+			return -1;
+		}
 
-	cv::Ptr<ImageSource> is = helper::createImageSource(argv[1]);
-	if(is.empty()) {
-		loglne("[main] createImageSource failed!");
-		return -1;
-	}
-	is->reportInfo();
+		cv::Ptr<ImageSource> is = helper::createImageSource(argv[1]);
+		if(is.empty()) {
+			loglne("[main] createImageSource failed!");
+			return -1;
+		}
+		is->reportInfo();
 
 	//// create tagFamily
 	int tagid = 0; //default tag16h5

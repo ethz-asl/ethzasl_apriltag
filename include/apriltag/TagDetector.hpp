@@ -61,11 +61,11 @@
 #include "TagUtils.hpp"
 
 #ifndef TAG_DEBUG_DRAW
-	#define TAG_DEBUG_DRAW 0
+	#define TAG_DEBUG_DRAW 1
 #endif
 
 #ifndef TAG_DEBUG_PERFORMANCE
-	#define TAG_DEBUG_PERFORMANCE 0
+	#define TAG_DEBUG_PERFORMANCE 1
 #endif
 
 namespace april

@@ -8,3 +8,6 @@ ADD_SUBDIRECTORY(AprilTagFinder)
 ADD_SUBDIRECTORY(AprilTagCreator)
 ADD_SUBDIRECTORY(KEG)
 ADD_SUBDIRECTORY(FERN) #for experiment, compare with KEG
+
+ADD_SUBDIRECTORY(AprilROSNode)
+
