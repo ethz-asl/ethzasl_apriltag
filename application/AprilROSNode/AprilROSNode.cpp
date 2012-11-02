@@ -60,8 +60,8 @@ AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(
 	pub_pose_ = nh_.advertise<geometry_msgs::PoseStamped> ("pose", 1);
 
 	//// create tagFamily
-	int tagid = ParamsAccess::fixParams->tagID;
-	tagFamily = TagFamilyFactory::create(tagid);
+	int familyid = ParamsAccess::fixParams->_tagFamilyID;
+	tagFamily = TagFamilyFactory::create(familyid);
 	if(tagFamily.empty()) {
 		loglne("[main] create TagFamily fail!");
 		exit(1);
@@ -300,10 +300,20 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		Eigen::Matrix3d tmp((double*)dd.homography[0]);
 		Eigen::Matrix3d H = tmp.transpose();
 
-		tf::Transform transform = homographyToPose(
-				fixparams->focalLengthX, fixparams->focalLengthY, fixparams->tagSize, H);
+		//read for currently detected tag, abort processing, if there are no parameters
+		 if(fixparams->_AprilTags.count(dd.id)==0){
+			 ROS_WARN("Detected Tag with ID %i but you no parameters were loaded for this tag! Please check the parameters file", dd.id);
+			 continue;
+		 }
+		AprilTagProperties& tagproperties = fixparams->_AprilTags[dd.id];
+		assert(tagproperties.id == dd.id);
 
-		transform = transform.inverse();
+		tf::Transform transform = homographyToPose(
+				fixparams->_focalLengthX, fixparams->_focalLengthY, tagproperties.scale, H);
+
+		//TODO add tag transform
+
+		transform = transform.inverse(); //camera, not tag
 
 		//put together a ROS pose
 		tf::Quaternion tfQuat = transform.getRotation();

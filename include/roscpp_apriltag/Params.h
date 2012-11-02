@@ -14,19 +14,30 @@
 
 #include <dynamic_reconfigure/server.h>
 #include <roscpp_apriltag/roscpp_apriltagConfig.h>
+#include <Eigen/Dense>
+#include <tf/tf.h>
 
 typedef roscpp_apriltag::roscpp_apriltagConfig varParamsT;
 
 typedef dynamic_reconfigure::Server<varParamsT> roscpp_apriltagParamsReconfigureServer;
 typedef roscpp_apriltag::roscpp_apriltagConfig VarParams;
 
+struct AprilTagProperties{
+	int id;
+	double scale;
+	tf::Transform transform;
+};
+
+typedef std::map<int, AprilTagProperties> TagMap_T;
+
 class FixParams
 {
 public:
-	int tagID;
-	double focalLengthX;
-	double focalLengthY;
-	double tagSize;
+	double _focalLengthX;
+	double _focalLengthY;
+	int _tagFamilyID;
+	TagMap_T _AprilTags;
+
 	void readFixParams();
 };
 
