@@ -43,7 +43,7 @@ Log::Level Log::level = Log::LOG_INFO;
 
 AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(true){
 
-	camera_frameid = "/invalid";
+	parent_frameid = "/invalid";
 
 	std::string topic = image_nh_.resolveName("image");
 	if (topic == "/image")
@@ -298,7 +298,7 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 	header.stamp = ros::Time::now();
 	poseCovStPtr->header = header;
 
-	header.frame_id = camera_frameid;
+	header.frame_id = parent_frameid;
 	poseStPtr->header = header;
 	pub_pose_.publish(poseStPtr);
 	pub_posewcov_.publish(poseCovStPtr);
@@ -307,7 +307,7 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 	tf::StampedTransform transform_msg;
 	transform_msg.setRotation(tfQuat);
 	transform_msg.setOrigin(tfTrans);
-	transform_msg.frame_id_ = camera_frameid;
+	transform_msg.frame_id_ = parent_frameid;
 	transform_msg.child_frame_id_ = frameid;
 	transform_msg.stamp_ = ros::Time::now();
 	tf_pub_.sendTransform(transform_msg);
@@ -324,7 +324,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	if(first_frame_){
 		ROS_INFO("OK Got first image. Running...");
 		first_frame_ = false;
-		camera_frameid = "/world";//msg->header.frame_id;
+		parent_frameid = "/world";//msg->header.frame_id;
 	}
 
 	//track the april tag and publish the tf
@@ -366,20 +366,23 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		const tf::Transform& tagFromWorld = tagproperties.transform;
 		transform = tagFromWorld * transform.inverse(); //TagFromCam^-1 * tagFromWorld
 
-
-		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
-
 		//publish
-		publishPoseAndTf(transform, frameid);
+		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
+//		publishPoseAndTf(transform, frameid);
+
 		//store best, which we assume to be the pose with the largest appearance in the image
 		if(dd.observedPerimeter>bestScore){
 			mostStableTransform = transform;
+			bestScore = dd.observedPerimeter;
 		}
 	}
 
+//	tf::Quaternion quat(tf::Vector3(0,0,1),-45./180.*M_PI);
+//	std::cout<<"quat "<<quat.getX()<<" "<<quat.getY()<<" "<<quat.getZ()<<" "<<quat.getW()<<std::endl;
+
 	//only publish if there is valid transform
 	if(bestScore>0){
-		std::string frameid = "/pose";
+		std::string frameid = "/april_pose";
 		//publish best
 		publishPoseAndTf(mostStableTransform, frameid);
 	}

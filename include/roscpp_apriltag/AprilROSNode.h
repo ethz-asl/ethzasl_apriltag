@@ -35,7 +35,7 @@ private:
 	ros::Publisher pub_posewcov_;
 	mutable bool first_frame_;
 	image_transport::Subscriber sub_image_;
-	std::string camera_frameid;
+	std::string parent_frameid;
 
 	void imageCallback(const sensor_msgs::ImageConstPtr & img);
 
