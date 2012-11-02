@@ -4,4 +4,24 @@ tagSize: 0.04
 
 #camera params
 focalLengthX: 614.0
-focalLengthY: 361.7
+focalLengthY: 614.4
+
+april001/id: 1
+april001/scale: 0.04
+april001/p/x: 0.0
+april001/p/y: 0.0
+april001/p/z: 0.0
+april001/q/x: 0.0
+april001/q/y: 0.0
+april001/q/z: 0.0
+april001/q/w: 1.0
+
+april501/id: 501
+april501/scale: 0.173
+april501/p/x: 0.0
+april501/p/y: 0.0
+april501/p/z: 0.0
+april501/q/x: 0.0
+april501/q/y: 0.0
+april501/q/z: 0.0 
+april501/q/w: 1.0 

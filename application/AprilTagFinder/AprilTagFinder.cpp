@@ -52,7 +52,7 @@
 
 #include "OpenCVHelper.h"
 #include "Log.h"
-//#define TAG_DEBUG_PERFORMANCE 1
+#define TAG_DEBUG_PERFORMANCE 0
 #include "apriltag/apriltag.hpp"
 #include "apriltag/TagFamilyFactory.hpp"
 #include "ImageHelper.h"

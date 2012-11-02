@@ -43,6 +43,7 @@ Log::Level Log::level = Log::LOG_INFO;
 
 AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(true){
 
+	camera_frameid = "/invalid";
 
 	std::string topic = image_nh_.resolveName("image");
 	if (topic == "/image")
@@ -55,7 +56,8 @@ AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(
 	sub_image_ = it.subscribe(topic, 1, &AprilROSNode::imageCallback, this, image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
 
 
-	pub_pose_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped> ("pose", 1);
+	pub_posewcov_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped> ("posewcov", 1);
+	pub_pose_ = nh_.advertise<geometry_msgs::PoseStamped> ("pose", 1);
 
 	//// create tagFamily
 	int tagid = ParamsAccess::fixParams->tagID;
@@ -133,13 +135,16 @@ AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(
 
 #define sq(x) ((x)*(x))
 
-tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix<double, 3,3> H)
+tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix3d H)
 {
+	using namespace Eigen;
+
+
+
 	// flip the homography along the Y axis to align the
 	// conventional image coordinate system (y=0 at the top) with
 	// the conventional camera coordinate system (y=0 at the
 	// bottom).
-	using namespace Eigen;
 
 	Eigen::Matrix3d F = Eigen::Matrix3d::Identity();
 
@@ -148,7 +153,7 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSiz
 
 	Eigen::Matrix3d h = F*H;
 
-	Eigen::Matrix<double, 3, 4> M;
+	Eigen::Matrix4d M;
 	M(0,0) =  h(0,0) / fx;
 	M(0,1) =  h(0,1) / fx;
 	M(0,3) =  h(0,2) / fx;
@@ -177,10 +182,10 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSiz
 	// order to make sure that they are +0. (We could have -0 due
 	// to the sign flip above. This is theoretically harmless but
 	// annoying in practice.)
-	M(2,0) = 0;
-	M(2,1) = 0;
-	M(2,2) = 0;
-	M(2,3) = 1;
+	M(3,0) = 0;
+	M(3,1) = 0;
+	M(3,2) = 0;
+	M(3,3) = 1;
 
 	// recover third rotation vector by crossproduct of the other two rotation vectors.
 	Eigen::Vector3d a;
@@ -213,15 +218,16 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSiz
 	tf.setOrigin(projectionMatrixToTranslationVector(M));
 	tf.setRotation(projectionMatrixToQuaternion(M));
 
+
 	return tf;
 }
 
 
-tf::Vector3 AprilROSNode::projectionMatrixToTranslationVector(Eigen::Matrix<double, 3, 4>& M) {
+tf::Vector3 AprilROSNode::projectionMatrixToTranslationVector(Eigen::Matrix4d& M) {
 	return tf::Vector3(M(0,3), -M(1,3), -M(2,3));
 }
 
-tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix<double, 3, 4>& M) {
+tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M) {
 
 	double qx, qy, qz, qw;
 
@@ -270,15 +276,14 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 	if(first_frame_){
 		ROS_INFO("OK Got first image. Running...");
-		//some init?
 		first_frame_ = false;
+		camera_frameid = "/world";//msg->header.frame_id;
 	}
-
 
 	//track the april tag and publish the tf
 
 	static helper::PerformanceMeasurer PM;
-	double imgW=msg->width, imgH=msg->height; //todo slynen: use calibration data!
+	double imgW=msg->width, imgH=msg->height;
 	vector<TagDetection> detections;
 	double opticalCenter[2] = { imgW/2.0, imgH/2.0 };
 	PM.tic();
@@ -290,18 +295,23 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	detector->process(img, opticalCenter, detections);
 
 	BOOST_FOREACH(TagDetection& dd, detections){
-		if(dd.hammingDistance>1) continue; //better not publish a tf, then publish a wrong one
+		if(dd.hammingDistance>1) continue; //better not publish a tf, than publishing the one of a wrong tag
+
 		Eigen::Matrix3d tmp((double*)dd.homography[0]);
-		Eigen::Matrix3d vm;
-		vm << 1,0,dd.hxy[0],0,1,dd.hxy[1],0,0,1;
-		Eigen::Matrix3d H = vm * tmp;
+		Eigen::Matrix3d H = tmp.transpose();
 
 		tf::Transform transform = homographyToPose(
 				fixparams->focalLengthX, fixparams->focalLengthY, fixparams->tagSize, H);
 
+		//get cam transform
+		transform = transform.inverse();
+
+		tf::Quaternion rot(tf::Vector3(1,0,0), M_PI);
+//		transform.setRotation(transform * rot);
+
 		//put together a ROS pose
 		tf::Quaternion tfQuat = transform.getRotation();
-		tf::Vector3 tfTrans = transform.getOrigin();
+		tf::Vector3 tfTrans = -transform.getOrigin();
 
 		geometry_msgs::Pose ros_pose;
 
@@ -319,22 +329,27 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		std::string frameid = "tag_"+boost::lexical_cast<std::string>(dd.id);
 
 		//pose msg
-		geometry_msgs::PoseWithCovarianceStampedPtr posePtr(new geometry_msgs::PoseWithCovarianceStamped);
-		posePtr->pose.pose = ros_pose;
+		geometry_msgs::PoseWithCovarianceStampedPtr poseCovStPtr(new geometry_msgs::PoseWithCovarianceStamped);
+		geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
+		poseCovStPtr->pose.pose = ros_pose;
+		poseStPtr->pose = ros_pose;
 		//		posePtr->pose.covariance = ?? //TODO fill this: dependend on viewpoint etc.
 		std_msgs::Header header;
 		header.frame_id = frameid;
 		header.seq = seq_pse++;
 		header.stamp = ros::Time::now();
-		posePtr->header = header;
+		poseCovStPtr->header = header;
 
-		pub_pose_.publish(posePtr);
+		header.frame_id = camera_frameid;
+		poseStPtr->header = header;
+		pub_pose_.publish(poseStPtr);
+		pub_posewcov_.publish(poseCovStPtr);
 
 		//tf msg
 		tf::StampedTransform transform_msg;
 		transform_msg.setRotation(tfQuat);
 		transform_msg.setOrigin(tfTrans);
-		transform_msg.frame_id_ = "/world";
+		transform_msg.frame_id_ = camera_frameid;
 		transform_msg.child_frame_id_ = frameid;
 		transform_msg.stamp_ = ros::Time::now();
 		tf_pub_.sendTransform(transform_msg);

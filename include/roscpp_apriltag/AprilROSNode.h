@@ -32,13 +32,15 @@ private:
 	ros::NodeHandle nh_, image_nh_;
 	tf::TransformBroadcaster tf_pub_;
 	ros::Publisher pub_pose_;
+	ros::Publisher pub_posewcov_;
 	bool first_frame_;
 	image_transport::Subscriber sub_image_;
+	std::string camera_frameid;
 
 	void imageCallback(const sensor_msgs::ImageConstPtr & img);
 
-	tf::Vector3 projectionMatrixToTranslationVector(Eigen::Matrix<double, 3, 4>& M);
-	tf::Quaternion projectionMatrixToQuaternion(Eigen::Matrix<double, 3, 4>& M);
+	tf::Vector3 projectionMatrixToTranslationVector(Eigen::Matrix4d& M);
+	tf::Quaternion projectionMatrixToQuaternion(Eigen::Matrix4d& M);
 	tf::Transform homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix<double, 3,3> H);
 
 public:
