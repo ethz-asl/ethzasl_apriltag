@@ -2,13 +2,13 @@
 tagFamilyID: 4 
 
 #camera params
-focalLengthX: 614.0
+focalLengthX: 414.0
 focalLengthY: 614.4
 
 april000/id: 0
-april000/scale: 0.173
-april000/p/x: 0.0
-april000/p/y: 0.0
+april000/scale: 0.15
+april000/p/x: 0.1
+april000/p/y: 0.18
 april000/p/z: 0.0
 april000/q/x: 0.0
 april000/q/y: 0.0
@@ -17,8 +17,8 @@ april000/q/w: 1.0
 
 april501/id: 501
 april501/scale: 0.04
-april501/p/x: 0.0
-april501/p/y: 0.0
+april501/p/x: 0.04
+april501/p/y: 0.04
 april501/p/z: 0.0
 april501/q/x: 0.0
 april501/q/y: 0.0

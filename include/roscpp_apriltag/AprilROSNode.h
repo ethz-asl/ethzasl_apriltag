@@ -33,16 +33,16 @@ private:
 	tf::TransformBroadcaster tf_pub_;
 	ros::Publisher pub_pose_;
 	ros::Publisher pub_posewcov_;
-	bool first_frame_;
+	mutable bool first_frame_;
 	image_transport::Subscriber sub_image_;
 	std::string camera_frameid;
 
 	void imageCallback(const sensor_msgs::ImageConstPtr & img);
 
-	tf::Vector3 projectionMatrixToTranslationVector(Eigen::Matrix4d& M);
-	tf::Quaternion projectionMatrixToQuaternion(Eigen::Matrix4d& M);
-	tf::Transform homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix<double, 3,3> H);
-
+	tf::Vector3 projectionMatrixToTranslationVector(Eigen::Matrix4d& M) const;
+	tf::Quaternion projectionMatrixToQuaternion(Eigen::Matrix4d& M) const;
+	tf::Transform homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix<double, 3,3> H) const;
+	void publishPoseAndTf(const tf::Transform& transform, std::string frameid) const;
 public:
 	AprilROSNode();
 	virtual ~AprilROSNode();

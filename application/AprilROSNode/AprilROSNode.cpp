@@ -135,7 +135,7 @@ AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(
 
 #define sq(x) ((x)*(x))
 
-tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix3d H)
+tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix3d H) const
 {
 	using namespace Eigen;
 
@@ -223,11 +223,11 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSiz
 }
 
 
-tf::Vector3 AprilROSNode::projectionMatrixToTranslationVector(Eigen::Matrix4d& M) {
+tf::Vector3 AprilROSNode::projectionMatrixToTranslationVector(Eigen::Matrix4d& M)  const{
 	return tf::Vector3(M(0,3), M(1,3), M(2,3));
 }
 
-tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M) {
+tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  const{
 
 	double qx, qy, qz, qw;
 
@@ -267,6 +267,53 @@ tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M) {
 	return tf::Quaternion(qx, qy, qz, qw);
 }
 
+void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string frameid) const{
+	//put together a ROS pose
+	tf::Quaternion tfQuat = transform.getRotation();
+	tf::Vector3 tfTrans = transform.getOrigin();
+
+	geometry_msgs::Pose ros_pose;
+
+	ros_pose.orientation.w = tfQuat.getW();
+	ros_pose.orientation.x = tfQuat.getX();
+	ros_pose.orientation.y = tfQuat.getY();
+	ros_pose.orientation.z = tfQuat.getZ();
+
+	ros_pose.position.x = tfTrans.getX();
+	ros_pose.position.y = tfTrans.getY();
+	ros_pose.position.z = tfTrans.getZ();
+
+	static int seq_pse = 0;
+
+
+	//pose msg
+	geometry_msgs::PoseWithCovarianceStampedPtr poseCovStPtr(new geometry_msgs::PoseWithCovarianceStamped);
+	geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
+	poseCovStPtr->pose.pose = ros_pose;
+	poseStPtr->pose = ros_pose;
+	//		posePtr->pose.covariance = ?? //TODO fill this: dependend on viewpoint etc.
+	std_msgs::Header header;
+	header.frame_id = frameid;
+	header.seq = seq_pse++;
+	header.stamp = ros::Time::now();
+	poseCovStPtr->header = header;
+
+	header.frame_id = camera_frameid;
+	poseStPtr->header = header;
+	pub_pose_.publish(poseStPtr);
+	pub_posewcov_.publish(poseCovStPtr);
+
+	//tf msg
+	tf::StampedTransform transform_msg;
+	transform_msg.setRotation(tfQuat);
+	transform_msg.setOrigin(tfTrans);
+	transform_msg.frame_id_ = camera_frameid;
+	transform_msg.child_frame_id_ = frameid;
+	transform_msg.stamp_ = ros::Time::now();
+	tf_pub_.sendTransform(transform_msg);
+}
+
+
 void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
 
@@ -294,6 +341,9 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 	detector->process(img, opticalCenter, detections);
 
+	tf::Transform mostStableTransform;
+	double bestScore = 0;
+
 	BOOST_FOREACH(TagDetection& dd, detections){
 		if(dd.hammingDistance>1) continue; //better not publish a tf, than publishing the one of a wrong tag
 
@@ -301,68 +351,38 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		Eigen::Matrix3d H = tmp.transpose();
 
 		//read for currently detected tag, abort processing, if there are no parameters
-		 if(fixparams->_AprilTags.count(dd.id)==0){
-			 ROS_WARN("Detected Tag with ID %i but you no parameters were loaded for this tag! Please check the parameters file", dd.id);
-			 continue;
-		 }
+		if(fixparams->_AprilTags.count(dd.id)==0){
+			ROS_WARN("Detected Tag with ID %i but you no parameters were loaded for this tag! Please check the parameters file", dd.id);
+			continue;
+		}
+
 		AprilTagProperties& tagproperties = fixparams->_AprilTags[dd.id];
 		assert(tagproperties.id == dd.id);
 
 		tf::Transform transform = homographyToPose(
 				fixparams->_focalLengthX, fixparams->_focalLengthY, tagproperties.scale, H);
 
-		//TODO add tag transform
+		//add tag transform
+		const tf::Transform& tagFromWorld = tagproperties.transform;
+		transform = tagFromWorld * transform.inverse(); //TagFromCam^-1 * tagFromWorld
 
-		transform = transform.inverse(); //camera, not tag
-
-		//put together a ROS pose
-		tf::Quaternion tfQuat = transform.getRotation();
-		tf::Vector3 tfTrans = transform.getOrigin();
-
-		geometry_msgs::Pose ros_pose;
-
-		ros_pose.orientation.w = tfQuat.getW();
-		ros_pose.orientation.x = tfQuat.getX();
-		ros_pose.orientation.y = tfQuat.getY();
-		ros_pose.orientation.z = tfQuat.getZ();
-
-		ros_pose.position.x = tfTrans.getX();
-		ros_pose.position.y = tfTrans.getY();
-		ros_pose.position.z = tfTrans.getZ();
-
-		static int seq_pse = 0;
 
 		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
 
-		//pose msg
-		geometry_msgs::PoseWithCovarianceStampedPtr poseCovStPtr(new geometry_msgs::PoseWithCovarianceStamped);
-		geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
-		poseCovStPtr->pose.pose = ros_pose;
-		poseStPtr->pose = ros_pose;
-		//		posePtr->pose.covariance = ?? //TODO fill this: dependend on viewpoint etc.
-		std_msgs::Header header;
-		header.frame_id = frameid;
-		header.seq = seq_pse++;
-		header.stamp = ros::Time::now();
-		poseCovStPtr->header = header;
-
-		header.frame_id = camera_frameid;
-		poseStPtr->header = header;
-		pub_pose_.publish(poseStPtr);
-		pub_posewcov_.publish(poseCovStPtr);
-
-		//tf msg
-		tf::StampedTransform transform_msg;
-		transform_msg.setRotation(tfQuat);
-		transform_msg.setOrigin(tfTrans);
-		transform_msg.frame_id_ = camera_frameid;
-		transform_msg.child_frame_id_ = frameid;
-		transform_msg.stamp_ = ros::Time::now();
-		tf_pub_.sendTransform(transform_msg);
-
+		//publish
+		publishPoseAndTf(transform, frameid);
+		//store best, which we assume to be the pose with the largest appearance in the image
+		if(dd.observedPerimeter>bestScore){
+			mostStableTransform = transform;
+		}
 	}
 
-
+	//only publish if there is valid transform
+	if(bestScore>0){
+		std::string frameid = "/pose";
+		//publish best
+		publishPoseAndTf(mostStableTransform, frameid);
+	}
 
 	//some debugging tools
 #if TAG_DEBUG_DRAW
