@@ -224,7 +224,7 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSiz
 
 
 tf::Vector3 AprilROSNode::projectionMatrixToTranslationVector(Eigen::Matrix4d& M) {
-	return tf::Vector3(M(0,3), -M(1,3), -M(2,3));
+	return tf::Vector3(M(0,3), M(1,3), M(2,3));
 }
 
 tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M) {
@@ -264,7 +264,7 @@ tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M) {
 		}
 	}
 
-	return tf::Quaternion(qx, -qy, -qz, qw);
+	return tf::Quaternion(qx, qy, qz, qw);
 }
 
 void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
@@ -303,15 +303,11 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		tf::Transform transform = homographyToPose(
 				fixparams->focalLengthX, fixparams->focalLengthY, fixparams->tagSize, H);
 
-		//get cam transform
 		transform = transform.inverse();
-
-		tf::Quaternion rot(tf::Vector3(1,0,0), M_PI);
-//		transform.setRotation(transform * rot);
 
 		//put together a ROS pose
 		tf::Quaternion tfQuat = transform.getRotation();
-		tf::Vector3 tfTrans = -transform.getOrigin();
+		tf::Vector3 tfTrans = transform.getOrigin();
 
 		geometry_msgs::Pose ros_pose;
 
@@ -326,7 +322,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 		static int seq_pse = 0;
 
-		std::string frameid = "tag_"+boost::lexical_cast<std::string>(dd.id);
+		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
 
 		//pose msg
 		geometry_msgs::PoseWithCovarianceStampedPtr poseCovStPtr(new geometry_msgs::PoseWithCovarianceStamped);
