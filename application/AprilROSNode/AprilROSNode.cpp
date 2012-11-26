@@ -291,7 +291,12 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 	geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
 	poseCovStPtr->pose.pose = ros_pose;
 	poseStPtr->pose = ros_pose;
-	//		posePtr->pose.covariance = ?? //TODO fill this: dependend on viewpoint etc.
+	double PoseNoise = ParamsAccess::varParams->PoseNoise;
+	Eigen::Matrix<double, 6, 6> cov = (Eigen::Matrix<double, 1, 6>::Constant(PoseNoise*PoseNoise)).asDiagonal();
+	assert(cov.SizeAtCompileTime == 36);
+	for(int i = 0;i<cov.SizeAtCompileTime;++i){
+		poseCovStPtr->pose.covariance[i] = cov.coeff(i); //TODO fill this: dependend on viewpoint etc.
+	}
 	std_msgs::Header header;
 	header.frame_id = frameid;
 	header.seq = seq_pse++;
@@ -368,7 +373,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 		//publish
 		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
-//		publishPoseAndTf(transform, frameid);
+		//		publishPoseAndTf(transform, frameid);
 
 		//store best, which we assume to be the pose with the largest appearance in the image
 		if(dd.observedPerimeter>bestScore){
@@ -377,8 +382,8 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		}
 	}
 
-//	tf::Quaternion quat(tf::Vector3(0,0,1),-45./180.*M_PI);
-//	std::cout<<"quat "<<quat.getX()<<" "<<quat.getY()<<" "<<quat.getZ()<<" "<<quat.getW()<<std::endl;
+	//	tf::Quaternion quat(tf::Vector3(0,0,1),-45./180.*M_PI);
+	//	std::cout<<"quat "<<quat.getX()<<" "<<quat.getY()<<" "<<quat.getZ()<<" "<<quat.getW()<<std::endl;
 
 	//only publish if there is valid transform
 	if(bestScore>0){
