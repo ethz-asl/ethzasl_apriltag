@@ -369,7 +369,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 		//add tag transform
 		const tf::Transform& tagFromWorld = tagproperties.transform;
-		tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse();
+		tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse() * tf::Transform(tf::Quaternion(1,0,0,0), tf::Vector3(0,0,0));
 	
 
 		//publish
