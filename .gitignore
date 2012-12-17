@@ -2,6 +2,12 @@
 *.slo
 *.lo
 *.o
+bin
+build
+.cproject
+.project
+src/roscpp_apriltag/cfg/*
+docs
 
 # Compiled Dynamic libraries
 *.so
