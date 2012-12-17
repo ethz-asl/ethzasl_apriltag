@@ -42,7 +42,7 @@ private:
 	tf::Vector3 projectionMatrixToTranslationVector(Eigen::Matrix4d& M) const;
 	tf::Quaternion projectionMatrixToQuaternion(Eigen::Matrix4d& M) const;
 	tf::Transform homographyToPose(double fx, double fy, double scale, double cx, double cy, const Eigen::Matrix<double, 3,3>& H) const;
-	void publishPoseAndTf(const tf::Transform& transform, std::string frameid) const;
+	void publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter) const;
 public:
 	AprilROSNode();
 	virtual ~AprilROSNode();

@@ -265,7 +265,7 @@ tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  c
 	return tf::Quaternion(qx, qy, qz, qw);
 }
 
-void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string frameid) const{
+void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter) const{
 	//put together a ROS pose
 	tf::Quaternion tfQuat = transform.getRotation();
 	tf::Vector3 tfTrans = transform.getOrigin();
@@ -290,6 +290,11 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 	poseCovStPtr->pose.pose = ros_pose;
 	poseStPtr->pose = ros_pose;
 	double PoseNoise = ParamsAccess::varParams->pose_noise;
+
+	//calculate the noise dependent on the observed perimeter
+	std::cout<<"Best: "<<largestObservedPerimeter<<std::endl;
+
+
 	Eigen::Matrix<double, 6, 6> cov = (Eigen::Matrix<double, 1, 6>::Constant(PoseNoise*PoseNoise)).asDiagonal();
 	assert(cov.SizeAtCompileTime == 36);
 	for(int i = 0;i<cov.SizeAtCompileTime;++i){
@@ -343,7 +348,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	detector->process(img, opticalCenter, detections);
 
 	tf::Transform mostStableTransform;
-	double bestScore = 0;
+	double largestObservedPerimeter = 0;
 
 	BOOST_FOREACH(TagDetection& dd, detections){
 		if(dd.hammingDistance>0) continue; //better not publish a tf, than publishing the one of a wrong tag
@@ -371,9 +376,9 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		//		publishPoseAndTf(transform, frameid);
 
 		//store best, which we assume to be the pose with the largest appearance in the image
-		if(dd.observedPerimeter>bestScore && dd.observedPerimeter > ParamsAccess::varParams->min_observed_tag_size){
+		if(dd.observedPerimeter>largestObservedPerimeter && dd.observedPerimeter > ParamsAccess::varParams->min_observed_tag_size * 4){ //size to perimeter
 			mostStableTransform = transform;
-			bestScore = dd.observedPerimeter;
+			largestObservedPerimeter = dd.observedPerimeter;
 		}
 	}
 
@@ -381,10 +386,10 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	//	std::cout<<"quat "<<quat.getX()<<" "<<quat.getY()<<" "<<quat.getZ()<<" "<<quat.getW()<<std::endl;
 
 	//only publish if there is valid transform
-	if(bestScore>0){
+	if(largestObservedPerimeter>0){
 		std::string frameid = "/april_pose";
 		//publish best
-		publishPoseAndTf(mostStableTransform, frameid);
+		publishPoseAndTf(mostStableTransform, frameid, largestObservedPerimeter);
 	}
 
 	//some debugging tools
