@@ -215,14 +215,14 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double s, dou
 
 	tf::Transform tf;
 	tf.setOrigin(projectionMatrixToTranslationVector(M));
-	tf.setRotation(projectionMatrixToQuaternion(M));
+	tf.setRotation(projectionMatrixToQuaternion(M)); 
 
 
 	return tf;
 }
 
 tf::Vector3 AprilROSNode::projectionMatrixToTranslationVector(Eigen::Matrix4d& M)  const{
-	return tf::Vector3(M(0,3), M(1,3), M(2,3));
+	return tf::Vector3(M(0,3),-M(1,3), -M(2,3));// camera looks towards tag
 }
 
 tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  const{
@@ -262,7 +262,7 @@ tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  c
 		}
 	}
 
-	return tf::Quaternion(qx, qy, qz, qw);
+	return tf::Quaternion(1,0,0,0) * tf::Quaternion(qx, qy, qz, qw); // camera looks towards tag
 }
 
 void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter) const{
@@ -369,7 +369,8 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 		//add tag transform
 		const tf::Transform& tagFromWorld = tagproperties.transform;
-		tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse() * tf::Transform(tf::Quaternion(1,0,0,0), tf::Vector3(0,0,0));
+	    tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse();
+		//tf::Transform transform = tf_tagfromcam * tagFromWorld.inverse();
 	
 
 		//publish
