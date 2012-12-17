@@ -135,11 +135,9 @@ AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(
 
 #define sq(x) ((x)*(x))
 
-tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSize, Eigen::Matrix3d H) const
+tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double s, double cx, double cy, const Eigen::Matrix3d& H) const
 {
 	using namespace Eigen;
-
-
 
 	// flip the homography along the Y axis to align the
 	// conventional image coordinate system (y=0 at the top) with
@@ -163,6 +161,7 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSiz
 	M(2,0) =  h(2,0);
 	M(2,1) =  h(2,1);
 	M(2,3) =  h(2,2);
+
 
 	// Compute the scale. The columns of M should be made to be
 	// unit vectors. This is over-determined, so we take the
@@ -212,7 +211,7 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSiz
 	// homography assumes that tags span from -1 to +1, i.e., that
 	// they are two units wide (and tall).
 	for (int i = 0; i < 3; i++)
-		M(i,3) *= tagSize / 2;
+		M(i,3) *= s / 2;
 
 	tf::Transform tf;
 	tf.setOrigin(projectionMatrixToTranslationVector(M));
@@ -221,7 +220,6 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double tagSiz
 
 	return tf;
 }
-
 
 tf::Vector3 AprilROSNode::projectionMatrixToTranslationVector(Eigen::Matrix4d& M)  const{
 	return tf::Vector3(M(0,3), M(1,3), M(2,3));
@@ -291,7 +289,7 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 	geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
 	poseCovStPtr->pose.pose = ros_pose;
 	poseStPtr->pose = ros_pose;
-	double PoseNoise = ParamsAccess::varParams->PoseNoise;
+	double PoseNoise = ParamsAccess::varParams->pose_noise;
 	Eigen::Matrix<double, 6, 6> cov = (Eigen::Matrix<double, 1, 6>::Constant(PoseNoise*PoseNoise)).asDiagonal();
 	assert(cov.SizeAtCompileTime == 36);
 	for(int i = 0;i<cov.SizeAtCompileTime;++i){
@@ -322,8 +320,6 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
 
-	VarParams* varParams = ParamsAccess::varParams;
-
 	FixParams* fixparams = ParamsAccess::fixParams;
 
 	if(first_frame_){
@@ -335,9 +331,9 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	//track the april tag and publish the tf
 
 	static helper::PerformanceMeasurer PM;
-	double imgW=msg->width, imgH=msg->height;
+
 	vector<TagDetection> detections;
-	double opticalCenter[2] = { imgW/2.0, imgH/2.0 };
+	double opticalCenter[2] = { fixparams->_imageCenterX, fixparams->_imageCenterY };
 	PM.tic();
 
 	namespace enc = sensor_msgs::image_encodings;
@@ -350,7 +346,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	double bestScore = 0;
 
 	BOOST_FOREACH(TagDetection& dd, detections){
-		if(dd.hammingDistance>1) continue; //better not publish a tf, than publishing the one of a wrong tag
+		if(dd.hammingDistance>0) continue; //better not publish a tf, than publishing the one of a wrong tag
 
 		Eigen::Matrix3d tmp((double*)dd.homography[0]);
 		Eigen::Matrix3d H = tmp.transpose();
@@ -362,21 +358,20 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		}
 
 		AprilTagProperties& tagproperties = fixparams->_AprilTags[dd.id];
-		assert(tagproperties.id == dd.id);
 
-		tf::Transform transform = homographyToPose(
-				fixparams->_focalLengthX, fixparams->_focalLengthY, tagproperties.scale, H);
+		tf::Transform tf_tagfromcam = homographyToPose(
+				fixparams->_focalLengthX, fixparams->_focalLengthY, tagproperties.scale, fixparams->_imageCenterX, fixparams->_imageCenterY, H);
 
 		//add tag transform
 		const tf::Transform& tagFromWorld = tagproperties.transform;
-		transform = tagFromWorld * transform.inverse(); //TagFromCam^-1 * tagFromWorld
+		tf::Transform transform = tagFromWorld * tf_tagfromcam.inverse();//(tf_tagfromcam * tagFromWorld).inverse();
 
 		//publish
 		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
 		//		publishPoseAndTf(transform, frameid);
 
 		//store best, which we assume to be the pose with the largest appearance in the image
-		if(dd.observedPerimeter>bestScore){
+		if(dd.observedPerimeter>bestScore && dd.observedPerimeter > ParamsAccess::varParams->min_observed_tag_size){
 			mostStableTransform = transform;
 			bestScore = dd.observedPerimeter;
 		}
@@ -448,6 +443,5 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 }
 
 AprilROSNode::~AprilROSNode() {
-	// TODO Auto-generated destructor stub
 }
 

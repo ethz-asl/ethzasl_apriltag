@@ -13,9 +13,11 @@ void FixParams::readFixParams()
 {
 	ros::NodeHandle nh("~");
 
-	nh.param("focalLengthX", _focalLengthX, 614.0);
-	nh.param("focalLengthY", _focalLengthY, 614.4);
-	nh.param("tagFamilyID", _tagFamilyID, 4);
+	nh.param("focal_length_x", _focalLengthX, 614.0);
+	nh.param("focal_length_y", _focalLengthY, 614.4);
+	nh.param("image_center_x", _imageCenterX, 376.0);
+	nh.param("image_center_y", _imageCenterY, 240.0);
+	nh.param("tag_family_id", _tagFamilyID, 4);
 
 	ROS_INFO("parsing parameters for tag properties");
 
@@ -68,7 +70,7 @@ void FixParams::readFixParams()
 				" "<<it->second.transform.getRotation().getZ()<<std::endl;
 	}
 	ss<<"------------------"<<std::endl;
-	ROS_INFO(ss.str().c_str());
+	ROS_INFO_STREAM(ss);
 }
 ;
 

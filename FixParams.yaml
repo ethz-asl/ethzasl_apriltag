@@ -16,17 +16,6 @@ april000/q/z: 0.0
 april000/q/w: 1.0
 
 #not rotated
-#april501/id: 501
-#april501/scale: 0.04
-#april501/p/x: 0.04
-#april501/p/y: 0.04
-#april501/p/z: 0.0
-#april501/q/x: 0.0
-#april501/q/y: 0.0
-#april501/q/z: 0.0 
-#april501/q/w: 1.0 
-
-#rotated -45 around z
 april501/id: 501
 april501/scale: 0.04
 april501/p/x: 0.04
@@ -34,5 +23,16 @@ april501/p/y: 0.04
 april501/p/z: 0.0
 april501/q/x: 0.0
 april501/q/y: 0.0
-april501/q/z: -0.382683 
-april501/q/w: 0.92388 
+april501/q/z: 0.0 
+april501/q/w: 1.0 
+
+#rotated -45 around z
+#april501/id: 501
+#april501/scale: 0.04
+#april501/p/x: 0.04
+#april501/p/y: 0.04
+#april501/p/z: 0.0
+#april501/q/x: 0.0
+#april501/q/y: 0.0
+#april501/q/z: -0.382683 
+#april501/q/w: 0.92388 

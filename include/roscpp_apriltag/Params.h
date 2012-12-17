@@ -35,6 +35,8 @@ class FixParams
 public:
 	double _focalLengthX;
 	double _focalLengthY;
+	double _imageCenterX;
+	double _imageCenterY;
 	int _tagFamilyID;
 	TagMap_T _AprilTags;
 
