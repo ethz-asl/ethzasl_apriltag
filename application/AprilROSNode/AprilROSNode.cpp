@@ -292,7 +292,7 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 	double PoseNoise = ParamsAccess::varParams->pose_noise;
 
 	//calculate the noise dependent on the observed perimeter
-	std::cout<<"Best: "<<largestObservedPerimeter<<std::endl;
+	//std::cout<<"Best: "<<largestObservedPerimeter<<std::endl;
 
 
 	Eigen::Matrix<double, 6, 6> cov = (Eigen::Matrix<double, 1, 6>::Constant(PoseNoise*PoseNoise)).asDiagonal();
@@ -330,7 +330,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	if(first_frame_){
 		ROS_INFO("OK Got first image. Running...");
 		first_frame_ = false;
-		parent_frameid = "/world";//msg->header.frame_id;
+		parent_frameid = msg->header.frame_id;
 	}
 
 	//track the april tag and publish the tf
@@ -369,7 +369,8 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 		//add tag transform
 		const tf::Transform& tagFromWorld = tagproperties.transform;
-		tf::Transform transform = tagFromWorld * tf_tagfromcam.inverse();//(tf_tagfromcam * tagFromWorld).inverse();
+		tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse();
+	
 
 		//publish
 		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
@@ -387,7 +388,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 	//only publish if there is valid transform
 	if(largestObservedPerimeter>0){
-		std::string frameid = "/april_pose";
+		std::string frameid = "/april_fix";
 		//publish best
 		publishPoseAndTf(mostStableTransform, frameid, largestObservedPerimeter);
 	}
