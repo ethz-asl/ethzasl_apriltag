@@ -18,7 +18,7 @@ FILE(GLOB CPP_FILES
 	*.cpp
 )
 
-SET(APP_NAME AprilROSNode)
+SET(APP_NAME april_node)
 
 SET(lib_SRCS
 	${CPP_FILES}
