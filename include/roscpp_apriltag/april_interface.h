@@ -35,7 +35,6 @@ private:
   ros::NodeHandle nh_, image_nh_;
   tf::TransformBroadcaster tf_pub_;
   ros::Publisher pub_pose_;
-  ros::Publisher pub_posewcov_;
   mutable bool first_frame_;
   image_transport::Subscriber sub_image_;
   ros::Subscriber cam_info_sub_;

@@ -65,8 +65,7 @@ AprilInterface::AprilInterface() :
 
   cam_info_sub_ = image_nh_.subscribe(topic_info, 1, &AprilInterface::cameraInfoCallback, this);
 
-  pub_posewcov_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("posewcov", 1);
-  pub_pose_ = nh_.advertise<geometry_msgs::PoseStamped>("pose", 1);
+  pub_pose_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("pose", 1);
 
   //// create tagFamily
   int familyid = ParamsAccess::fixParams->_tagFamilyID;
@@ -303,9 +302,7 @@ void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::strin
 
   //pose msg
   geometry_msgs::PoseWithCovarianceStampedPtr poseCovStPtr(new geometry_msgs::PoseWithCovarianceStamped);
-  geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
   poseCovStPtr->pose.pose = ros_pose;
-  poseStPtr->pose = ros_pose;
   double PoseNoise = ParamsAccess::varParams->pose_noise;
 
   //calculate the noise dependent on the observed perimeter
@@ -324,9 +321,7 @@ void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::strin
   poseCovStPtr->header = header;
 
   header.frame_id = parent_frameid;
-  poseStPtr->header = header;
-  pub_pose_.publish(poseStPtr);
-  pub_posewcov_.publish(poseCovStPtr);
+  pub_pose_.publish(poseCovStPtr);
 
   //tf msg
   tf::StampedTransform transform_msg;
