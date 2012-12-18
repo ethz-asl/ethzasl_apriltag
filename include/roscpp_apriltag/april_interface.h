@@ -1,5 +1,5 @@
 /*
- * AprilROSNode.h
+ * AprilInterface.h
  *
  *  Created on: Nov 1, 2012
  *      Author: slynen
@@ -29,7 +29,7 @@
 
 //#define TAG_DEBUG_PERFORMANCE 1
 
-class AprilROSNode {
+class AprilInterface {
 private:
 	ros::NodeHandle nh_, image_nh_;
 	tf::TransformBroadcaster tf_pub_;
@@ -50,8 +50,8 @@ private:
 	tf::Transform homographyToPose(double fx, double fy, double scale, double cx, double cy, const Eigen::Matrix<double, 3,3>& H) const;
 	void publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter);
 public:
-	AprilROSNode();
-	virtual ~AprilROSNode();
+	AprilInterface();
+	virtual ~AprilInterface();
 };
 
 #endif /* APRILROSNODE_H_ */

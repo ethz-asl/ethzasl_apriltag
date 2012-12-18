@@ -1,5 +1,5 @@
 /*
- * AprilROSNode.cpp
+ * AprilInterface.cpp
  *
  *  Created on: Nov 1, 2012
  *      Author: slynen
@@ -8,7 +8,7 @@
 #define TAG_DEBUG_PERFORMANCE 0
 #define TAG_DEBUG_DRAW 0
 
-#include "roscpp_apriltag/AprilROSNode.h"
+#include "roscpp_apriltag/april_interface.h"
 #include "apriltag/apriltag.hpp"
 #include "apriltag/TagFamilyFactory.hpp"
 #include <image_transport/image_transport.h>
@@ -41,7 +41,7 @@ Log::Level Log::level = Log::LOG_DEBUG;
 Log::Level Log::level = Log::LOG_INFO;
 #endif
 
-AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(true){
+AprilInterface::AprilInterface() : nh_("apriltag"), image_nh_(""), first_frame_(true){
 
 	parent_frameid = "/invalid";
 
@@ -49,20 +49,20 @@ AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(
 	if (topic == "/image")
 	{
 		ROS_WARN("video source: image has not been remapped! Typical command-line usage:\n"
-				"\t$ ./AprilROSNode image:=<image topic>");
+				"\t$ ./AprilInterface image:=<image topic>");
 	}
 
 	std::string topic_info = image_nh_.resolveName("camera_info");
 	if (topic_info == "/camera_info")
 	{
 		ROS_WARN("info source: cam info has not been remapped! Typical command-line usage:\n"
-				"\t$ ./AprilROSNode camera_info:=<info topic>");
+				"\t$ ./AprilInterface camera_info:=<info topic>");
 	}
 
 	image_transport::ImageTransport it(image_nh_);
-	sub_image_ = it.subscribe(topic, 1, &AprilROSNode::imageCallback, this, image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
+	sub_image_ = it.subscribe(topic, 1, &AprilInterface::imageCallback, this, image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
 
-	cam_info_sub_ = image_nh_.subscribe(topic_info, 1, &AprilROSNode::cameraInfoCallback, this);
+	cam_info_sub_ = image_nh_.subscribe(topic_info, 1, &AprilInterface::cameraInfoCallback, this);
 
 	pub_posewcov_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped> ("posewcov", 1);
 	pub_pose_ = nh_.advertise<geometry_msgs::PoseStamped> ("pose", 1);
@@ -143,7 +143,7 @@ AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(
 
 #define sq(x) ((x)*(x))
 
-tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double s, double cx, double cy, const Eigen::Matrix3d& H) const
+tf::Transform AprilInterface::homographyToPose(double fx, double fy, double s, double cx, double cy, const Eigen::Matrix3d& H) const
 {
 	using namespace Eigen;
 
@@ -229,11 +229,11 @@ tf::Transform AprilROSNode::homographyToPose(double fx, double fy, double s, dou
 	return tf;
 }
 
-tf::Vector3 AprilROSNode::projectionMatrixToTranslationVector(Eigen::Matrix4d& M)  const{
+tf::Vector3 AprilInterface::projectionMatrixToTranslationVector(Eigen::Matrix4d& M)  const{
 	return tf::Vector3(M(0,3),-M(1,3), -M(2,3));// camera looks towards tag
 }
 
-tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  const{
+tf::Quaternion AprilInterface::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  const{
 
 	double qx, qy, qz, qw;
 
@@ -273,7 +273,7 @@ tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  c
 	return tf::Quaternion(1,0,0,0) * tf::Quaternion(qx, qy, qz, qw); // camera looks towards tag
 }
 
-void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter){
+void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter){
 	//put together a ROS pose
 	tf::Quaternion tfQuat = transform.getRotation();
 	tf::Vector3 tfTrans = transform.getOrigin();
@@ -329,11 +329,11 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 	tf_pub_.sendTransform(transform_msg);
 }
 
-void AprilROSNode::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& msg){
+void AprilInterface::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& msg){
 	last_cam_info_msg_ = msg; //cache latest cam info
 }
 
-void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
+void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
 
 	FixParams* fixparams = ParamsAccess::fixParams;
@@ -351,7 +351,7 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	vector<TagDetection> detections;
 
 	if(last_cam_info_msg_.get() == NULL){
-		ROS_WARN_STREAM_THROTTLE(2,"Did not recieve valid camera info message up to now. Did you remap the camera info topic? Discarding image!");
+		ROS_WARN_STREAM_THROTTLE(2,"Did not receive valid camera info message up to now. Did you remap the camera info topic? Discarding image!");
 		return;
 	}
 
@@ -466,6 +466,6 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 
 }
 
-AprilROSNode::~AprilROSNode() {
+AprilInterface::~AprilInterface() {
 }
 

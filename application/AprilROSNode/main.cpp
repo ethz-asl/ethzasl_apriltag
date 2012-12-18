@@ -5,17 +5,17 @@
  *      Author: slynen
  */
 
-#include "roscpp_apriltag/AprilROSNode.h"
+#include "roscpp_apriltag/april_interface.h"
 
 int main( int argc, char **argv )
 {
 
-	ros::init(argc, argv, "AprilTagROSNode");
-	ROS_INFO("starting AprilTagROSNode with node name %s", ros::this_node::getName().c_str());
+	ros::init(argc, argv, "apriltag");
+	ROS_INFO("starting April Tracker with node name %s", ros::this_node::getName().c_str());
 
 	roscpp_apriltagParameters mParameters; //instantiate singleton, read params
 
-	AprilROSNode aprilnode;
+	AprilInterface aprilnode;
 
 	ros::spin();
 
