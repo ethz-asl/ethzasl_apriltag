@@ -40,7 +40,7 @@ Log::Level Log::level = Log::LOG_INFO;
 #endif
 
 AprilInterface::AprilInterface() :
-    nh_("apriltag"), image_nh_(""), first_frame_(true)
+    nh_("apriltag"), image_nh_(""), first_frame_(true), seq_number_(0)
 {
 
   parent_frameid = "/invalid";
@@ -301,8 +301,6 @@ void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::strin
   ros_pose.position.y = tfTrans.getY();
   ros_pose.position.z = tfTrans.getZ();
 
-  static int seq_pse = 0;
-
   //pose msg
   geometry_msgs::PoseWithCovarianceStampedPtr poseCovStPtr(new geometry_msgs::PoseWithCovarianceStamped);
   geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
@@ -321,7 +319,7 @@ void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::strin
   }
   std_msgs::Header header;
   header.frame_id = frameid;
-  header.seq = seq_pse++;
+  header.seq = seq_number_++;
   header.stamp = ros::Time::now();
   poseCovStPtr->header = header;
 

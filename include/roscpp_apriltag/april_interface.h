@@ -40,6 +40,7 @@ private:
   image_transport::Subscriber sub_image_;
   ros::Subscriber cam_info_sub_;
   std::string parent_frameid;
+  unsigned int seq_number_;
 
   void imageCallback(const sensor_msgs::ImageConstPtr & img);
   void cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& msg);
