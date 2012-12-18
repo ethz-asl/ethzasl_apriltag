@@ -33,59 +33,61 @@ using helper::ImageSource;
 cv::Ptr<TagFamily> tagFamily;
 cv::Ptr<TagDetector> detector;
 
-
-
 #if TAG_DEBUG_PERFORMANCE
 Log::Level Log::level = Log::LOG_DEBUG;
 #else
 Log::Level Log::level = Log::LOG_INFO;
 #endif
 
-AprilInterface::AprilInterface() : nh_("apriltag"), image_nh_(""), first_frame_(true){
+AprilInterface::AprilInterface() :
+    nh_("apriltag"), image_nh_(""), first_frame_(true)
+{
 
-	parent_frameid = "/invalid";
+  parent_frameid = "/invalid";
 
-	std::string topic = image_nh_.resolveName("image");
-	if (topic == "/image")
-	{
-		ROS_WARN("video source: image has not been remapped! Typical command-line usage:\n"
-				"\t$ ./AprilInterface image:=<image topic>");
-	}
+  std::string topic = image_nh_.resolveName("image");
+  if (topic == "/image")
+  {
+    ROS_WARN("video source: image has not been remapped! Typical command-line usage:\n"
+    "\t$ ./AprilInterface image:=<image topic>");
+  }
 
-	std::string topic_info = image_nh_.resolveName("camera_info");
-	if (topic_info == "/camera_info")
-	{
-		ROS_WARN("info source: cam info has not been remapped! Typical command-line usage:\n"
-				"\t$ ./AprilInterface camera_info:=<info topic>");
-	}
+  std::string topic_info = image_nh_.resolveName("camera_info");
+  if (topic_info == "/camera_info")
+  {
+    ROS_WARN("info source: cam info has not been remapped! Typical command-line usage:\n"
+    "\t$ ./AprilInterface camera_info:=<info topic>");
+  }
 
-	image_transport::ImageTransport it(image_nh_);
-	sub_image_ = it.subscribe(topic, 1, &AprilInterface::imageCallback, this, image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
+  image_transport::ImageTransport it(image_nh_);
+  sub_image_ = it.subscribe(topic, 1, &AprilInterface::imageCallback, this,
+                            image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
 
-	cam_info_sub_ = image_nh_.subscribe(topic_info, 1, &AprilInterface::cameraInfoCallback, this);
+  cam_info_sub_ = image_nh_.subscribe(topic_info, 1, &AprilInterface::cameraInfoCallback, this);
 
-	pub_posewcov_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped> ("posewcov", 1);
-	pub_pose_ = nh_.advertise<geometry_msgs::PoseStamped> ("pose", 1);
+  pub_posewcov_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("posewcov", 1);
+  pub_pose_ = nh_.advertise<geometry_msgs::PoseStamped>("pose", 1);
 
-	//// create tagFamily
-	int familyid = ParamsAccess::fixParams->_tagFamilyID;
-	tagFamily = TagFamilyFactory::create(familyid);
-	if(tagFamily.empty()) {
-		loglne("[main] create TagFamily fail!");
-		exit(1);
-	}
-	detector = new TagDetector(tagFamily);
-	if(detector.empty()) {
-		loglne("[main] create TagDetector fail!");
-		exit(1);
-	}
+  //// create tagFamily
+  int familyid = ParamsAccess::fixParams->_tagFamilyID;
+  tagFamily = TagFamilyFactory::create(familyid);
+  if (tagFamily.empty())
+  {
+    loglne("[main] create TagFamily fail!");
+    exit(1);
+  }
+  detector = new TagDetector(tagFamily);
+  if (detector.empty())
+  {
+    loglne("[main] create TagDetector fail!");
+    exit(1);
+  }
 #if TAG_DEBUG_DRAW
-	cv::namedWindow("april");
+  cv::namedWindow("april");
 #endif
 
-	ROS_INFO("waiting for first image");
+  ROS_INFO("waiting for first image");
 }
-
 
 /** Given a 3x3 homography matrix and the focal lengths of the
  * camera, compute the pose of the tag. The focal lengths should
@@ -140,332 +142,349 @@ AprilInterface::AprilInterface() : nh_("apriltag"), image_nh_(""), first_frame_(
  **/
 
 //slynen: rewritten from java
-
 #define sq(x) ((x)*(x))
 
-tf::Transform AprilInterface::homographyToPose(double fx, double fy, double s, double cx, double cy, const Eigen::Matrix3d& H) const
+tf::Transform AprilInterface::homographyToPose(double fx, double fy, double s, double cx, double cy,
+                                               const Eigen::Matrix3d& H) const
 {
-	using namespace Eigen;
+  using namespace Eigen;
 
-	// flip the homography along the Y axis to align the
-	// conventional image coordinate system (y=0 at the top) with
-	// the conventional camera coordinate system (y=0 at the
-	// bottom).
+  // flip the homography along the Y axis to align the
+  // conventional image coordinate system (y=0 at the top) with
+  // the conventional camera coordinate system (y=0 at the
+  // bottom).
 
-	Eigen::Matrix3d F = Eigen::Matrix3d::Identity();
+  Eigen::Matrix3d F = Eigen::Matrix3d::Identity();
 
-	F(1,1) = -1;
-	F(2,2) = -1;
+  F(1, 1) = -1;
+  F(2, 2) = -1;
 
-	Eigen::Matrix3d h = F*H;
+  Eigen::Matrix3d h = F * H;
 
-	Eigen::Matrix4d M;
-	M(0,0) =  h(0,0) / fx;
-	M(0,1) =  h(0,1) / fx;
-	M(0,3) =  h(0,2) / fx;
-	M(1,0) =  h(1,0) / fy;
-	M(1,1) =  h(1,1) / fy;
-	M(1,3) =  h(1,2) / fy;
-	M(2,0) =  h(2,0);
-	M(2,1) =  h(2,1);
-	M(2,3) =  h(2,2);
+  Eigen::Matrix4d M;
+  M(0, 0) = h(0, 0) / fx;
+  M(0, 1) = h(0, 1) / fx;
+  M(0, 3) = h(0, 2) / fx;
+  M(1, 0) = h(1, 0) / fy;
+  M(1, 1) = h(1, 1) / fy;
+  M(1, 3) = h(1, 2) / fy;
+  M(2, 0) = h(2, 0);
+  M(2, 1) = h(2, 1);
+  M(2, 3) = h(2, 2);
 
+  // Compute the scale. The columns of M should be made to be
+  // unit vectors. This is over-determined, so we take the
+  // geometric average.
+  double scale0 = sqrt(sq(M(0,0)) + sq(M(1,0)) + sq(M(2,0)));
+  double scale1 = sqrt(sq(M(0,1)) + sq(M(1,1)) + sq(M(2,1)));
+  double scale = sqrt(scale0 * scale1);
 
-	// Compute the scale. The columns of M should be made to be
-	// unit vectors. This is over-determined, so we take the
-	// geometric average.
-	double scale0 = sqrt(sq(M(0,0)) + sq(M(1,0)) + sq(M(2,0)));
-	double scale1 = sqrt(sq(M(0,1)) + sq(M(1,1)) + sq(M(2,1)));
-	double scale = sqrt(scale0*scale1);
+  M *= 1.0 / scale;
 
-	M *= 1.0/scale;
+  // recover sign of scale factor by noting that observations must occur in front of the camera.
+  if (M(2, 3) > 0)
+    M *= -1;
 
-	// recover sign of scale factor by noting that observations must occur in front of the camera.
-	if (M(2,3) > 0)
-		M *= -1;
+  // The bottom row should always be [0 0 0 1].  We reset the
+  // first three elements, even though they must be zero, in
+  // order to make sure that they are +0. (We could have -0 due
+  // to the sign flip above. This is theoretically harmless but
+  // annoying in practice.)
+  M(3, 0) = 0;
+  M(3, 1) = 0;
+  M(3, 2) = 0;
+  M(3, 3) = 1;
 
-	// The bottom row should always be [0 0 0 1].  We reset the
-	// first three elements, even though they must be zero, in
-	// order to make sure that they are +0. (We could have -0 due
-	// to the sign flip above. This is theoretically harmless but
-	// annoying in practice.)
-	M(3,0) = 0;
-	M(3,1) = 0;
-	M(3,2) = 0;
-	M(3,3) = 1;
+  // recover third rotation vector by crossproduct of the other two rotation vectors.
+  Eigen::Vector3d a;
+  a << M(0, 0), M(1, 0), M(2, 0);
+  Eigen::Vector3d b;
+  b << M(0, 1), M(1, 1), M(2, 1);
+  Eigen::Vector3d ab = a.cross(b);
 
-	// recover third rotation vector by crossproduct of the other two rotation vectors.
-	Eigen::Vector3d a;
-	a << M(0,0), M(1,0), M(2,0);
-	Eigen::Vector3d b;
-	b << M(0,1), M(1,1), M(2,1);
-	Eigen::Vector3d ab = a.cross(b);
+  M(0, 2) = ab(0);
+  M(1, 2) = ab(1);
+  M(2, 2) = ab(2);
 
-	M(0,2) = ab(0);
-	M(1,2) = ab(1);
-	M(2,2) = ab(2);
+  // pull out just the rotation component so we can normalize it.
+  Matrix3d R = M.block<3, 3>(0, 0);
 
-	// pull out just the rotation component so we can normalize it.
-	Matrix3d R = M.block<3,3>(0,0);
+  JacobiSVD<Matrix3d> svd;
+  svd.compute(R, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
-	JacobiSVD<Matrix3d> svd;
-	svd.compute(R, Eigen::ComputeFullU | Eigen::ComputeFullV);
+  // polar decomposition, R = (UV')(VSV')
+  Matrix3d MR = svd.matrixU() * svd.matrixV().transpose();
+  M.block<3, 3>(0, 0) = MR;
 
-	// polar decomposition, R = (UV')(VSV')
-	Matrix3d MR = svd.matrixU() * svd.matrixV().transpose();
-	M.block<3,3>(0,0) = MR;
+  // Scale the results based on the scale in the homography. The
+  // homography assumes that tags span from -1 to +1, i.e., that
+  // they are two units wide (and tall).
+  for (int i = 0; i < 3; i++)
+    M(i, 3) *= s / 2;
 
-	// Scale the results based on the scale in the homography. The
-	// homography assumes that tags span from -1 to +1, i.e., that
-	// they are two units wide (and tall).
-	for (int i = 0; i < 3; i++)
-		M(i,3) *= s / 2;
+  tf::Transform tf;
+  tf.setOrigin(projectionMatrixToTranslationVector(M));
+  tf.setRotation(projectionMatrixToQuaternion(M));
 
-	tf::Transform tf;
-	tf.setOrigin(projectionMatrixToTranslationVector(M));
-	tf.setRotation(projectionMatrixToQuaternion(M)); 
-
-
-	return tf;
+  return tf;
 }
 
-tf::Vector3 AprilInterface::projectionMatrixToTranslationVector(Eigen::Matrix4d& M)  const{
-	return tf::Vector3(M(0,3),-M(1,3), -M(2,3));// camera looks towards tag
+tf::Vector3 AprilInterface::projectionMatrixToTranslationVector(Eigen::Matrix4d& M) const
+{
+  return tf::Vector3(M(0, 3), -M(1, 3), -M(2, 3));	// camera looks towards tag
 }
 
-tf::Quaternion AprilInterface::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  const{
+tf::Quaternion AprilInterface::projectionMatrixToQuaternion(Eigen::Matrix4d& M) const
+{
 
-	double qx, qy, qz, qw;
+  double qx, qy, qz, qw;
 
-	double t = M(0,0) + M(1,1) + M(2,2);
-	if (t > 0) {
-		double r = sqrt(1+t);
-		double s = 0.5 / r;
-		qw = 0.5 * r;
-		qx = (M(2,1) - M(1,2)) * s;
-		qy = (M(0,2) - M(2,0)) * s;
-		qz = (M(1,0) - M(0,1)) * s;
-	} else {
-		if (M(0,0) > M(1,1) && M(0,0) > M(2,2)) {
-			double r = sqrt(1.0 + M(0,0) - M(1,1) - M(2,2));
-			double s = 0.5f / r;
-			qw = (M(2,1) - M(1,2)) * s;
-			qx = 0.5 * r;
-			qy = (M(0,1) + M(1,0)) * s;
-			qz = (M(2,0) + M(0,2)) * s;
-		} else if (M(1,1) > M(2,2)) {
-			double r = sqrt(1.0 + M(1,1) - M(0,0) - M(2,2));
-			double s = 0.5 / r;
-			qw = (M(0,2) - M(2,0)) * s;
-			qx = (M(0,1) + M(1,0)) * s;
-			qy = 0.5 * r;
-			qz = (M(1,2) + M(2,1)) * s;
-		} else {
-			double r = sqrt(1.0 + M(2,2) - M(0,0) - M(1,1));
-			double s = 0.5 / r;
-			qw = (M(1,0) - M(0,1)) * s;
-			qx = (M(0,2) + M(2,0)) * s;
-			qy = (M(1,2) + M(2,1)) * s;
-			qz = 0.5 * r;
-		}
-	}
+  double t = M(0, 0) + M(1, 1) + M(2, 2);
+  if (t > 0)
+  {
+    double r = sqrt(1 + t);
+    double s = 0.5 / r;
+    qw = 0.5 * r;
+    qx = (M(2, 1) - M(1, 2)) * s;
+    qy = (M(0, 2) - M(2, 0)) * s;
+    qz = (M(1, 0) - M(0, 1)) * s;
+  }
+  else
+  {
+    if (M(0, 0) > M(1, 1) && M(0, 0) > M(2, 2))
+    {
+      double r = sqrt(1.0 + M(0, 0) - M(1, 1) - M(2, 2));
+      double s = 0.5f / r;
+      qw = (M(2, 1) - M(1, 2)) * s;
+      qx = 0.5 * r;
+      qy = (M(0, 1) + M(1, 0)) * s;
+      qz = (M(2, 0) + M(0, 2)) * s;
+    }
+    else if (M(1, 1) > M(2, 2))
+    {
+      double r = sqrt(1.0 + M(1, 1) - M(0, 0) - M(2, 2));
+      double s = 0.5 / r;
+      qw = (M(0, 2) - M(2, 0)) * s;
+      qx = (M(0, 1) + M(1, 0)) * s;
+      qy = 0.5 * r;
+      qz = (M(1, 2) + M(2, 1)) * s;
+    }
+    else
+    {
+      double r = sqrt(1.0 + M(2, 2) - M(0, 0) - M(1, 1));
+      double s = 0.5 / r;
+      qw = (M(1, 0) - M(0, 1)) * s;
+    qx = (M(0, 2) + M(2, 0)) * s;
+      qy = (M(1, 2) + M(2, 1)) * s;
+      qz = 0.5 * r;
+    }
+  }
 
-	return tf::Quaternion(1,0,0,0) * tf::Quaternion(qx, qy, qz, qw); // camera looks towards tag
+  return tf::Quaternion(1, 0, 0, 0) * tf::Quaternion(qx, qy, qz, qw); // camera looks towards tag
 }
 
-void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter){
-	//put together a ROS pose
-	tf::Quaternion tfQuat = transform.getRotation();
-	tf::Vector3 tfTrans = transform.getOrigin();
+void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::string frameid,
+                                      double largestObservedPerimeter)
+{
+  //put together a ROS pose
+  tf::Quaternion tfQuat = transform.getRotation();
+  tf::Vector3 tfTrans = transform.getOrigin();
 
-	geometry_msgs::Pose ros_pose;
+  geometry_msgs::Pose ros_pose;
 
-	ros_pose.orientation.w = tfQuat.getW();
-	ros_pose.orientation.x = tfQuat.getX();
-	ros_pose.orientation.y = tfQuat.getY();
-	ros_pose.orientation.z = tfQuat.getZ();
+  ros_pose.orientation.w = tfQuat.getW();
+  ros_pose.orientation.x = tfQuat.getX();
+  ros_pose.orientation.y = tfQuat.getY();
+  ros_pose.orientation.z = tfQuat.getZ();
 
-	ros_pose.position.x = tfTrans.getX();
-	ros_pose.position.y = tfTrans.getY();
-	ros_pose.position.z = tfTrans.getZ();
+  ros_pose.position.x = tfTrans.getX();
+  ros_pose.position.y = tfTrans.getY();
+  ros_pose.position.z = tfTrans.getZ();
 
-	static int seq_pse = 0;
+  static int seq_pse = 0;
 
+  //pose msg
+  geometry_msgs::PoseWithCovarianceStampedPtr poseCovStPtr(new geometry_msgs::PoseWithCovarianceStamped);
+  geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
+  poseCovStPtr->pose.pose = ros_pose;
+  poseStPtr->pose = ros_pose;
+  double PoseNoise = ParamsAccess::varParams->pose_noise;
 
-	//pose msg
-	geometry_msgs::PoseWithCovarianceStampedPtr poseCovStPtr(new geometry_msgs::PoseWithCovarianceStamped);
-	geometry_msgs::PoseStampedPtr poseStPtr(new geometry_msgs::PoseStamped);
-	poseCovStPtr->pose.pose = ros_pose;
-	poseStPtr->pose = ros_pose;
-	double PoseNoise = ParamsAccess::varParams->pose_noise;
+  //calculate the noise dependent on the observed perimeter
+  //std::cout<<"Best: "<<largestObservedPerimeter<<std::endl;
 
-	//calculate the noise dependent on the observed perimeter
-	//std::cout<<"Best: "<<largestObservedPerimeter<<std::endl;
+  Eigen::Matrix<double, 6, 6> cov = (Eigen::Matrix<double, 1, 6>::Constant(PoseNoise * PoseNoise)).asDiagonal();
+  assert(cov.SizeAtCompileTime == 36);
+  for (int i = 0; i < cov.SizeAtCompileTime; ++i)
+  {
+    poseCovStPtr->pose.covariance[i] = cov.coeff(i); //TODO fill this: dependend on viewpoint etc.
+  }
+  std_msgs::Header header;
+  header.frame_id = frameid;
+  header.seq = seq_pse++;
+  header.stamp = ros::Time::now();
+  poseCovStPtr->header = header;
 
+  header.frame_id = parent_frameid;
+  poseStPtr->header = header;
+  pub_pose_.publish(poseStPtr);
+  pub_posewcov_.publish(poseCovStPtr);
 
-	Eigen::Matrix<double, 6, 6> cov = (Eigen::Matrix<double, 1, 6>::Constant(PoseNoise*PoseNoise)).asDiagonal();
-	assert(cov.SizeAtCompileTime == 36);
-	for(int i = 0;i<cov.SizeAtCompileTime;++i){
-		poseCovStPtr->pose.covariance[i] = cov.coeff(i); //TODO fill this: dependend on viewpoint etc.
-	}
-	std_msgs::Header header;
-	header.frame_id = frameid;
-	header.seq = seq_pse++;
-	header.stamp = ros::Time::now();
-	poseCovStPtr->header = header;
-
-	header.frame_id = parent_frameid;
-	poseStPtr->header = header;
-	pub_pose_.publish(poseStPtr);
-	pub_posewcov_.publish(poseCovStPtr);
-
-	//tf msg
-	tf::StampedTransform transform_msg;
-	transform_msg.setRotation(tfQuat);
-	transform_msg.setOrigin(tfTrans);
-	transform_msg.frame_id_ = parent_frameid;
-	transform_msg.child_frame_id_ = frameid;
-	transform_msg.stamp_ = ros::Time::now();
-	tf_pub_.sendTransform(transform_msg);
+  //tf msg
+  tf::StampedTransform transform_msg;
+  transform_msg.setRotation(tfQuat);
+  transform_msg.setOrigin(tfTrans);
+  transform_msg.frame_id_ = parent_frameid;
+  transform_msg.child_frame_id_ = frameid;
+  transform_msg.stamp_ = ros::Time::now();
+  tf_pub_.sendTransform(transform_msg);
 }
 
-void AprilInterface::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& msg){
-	last_cam_info_msg_ = msg; //cache latest cam info
+void AprilInterface::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& msg)
+{
+  last_cam_info_msg_ = msg; //cache latest cam info
 }
 
-void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg){
-	ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
+void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
+{
+  ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
 
-	FixParams* fixparams = ParamsAccess::fixParams;
+  FixParams* fixparams = ParamsAccess::fixParams;
 
-	if(first_frame_){
-		ROS_INFO("OK Got first image. Running...");
-		first_frame_ = false;
-		parent_frameid = msg->header.frame_id;
-	}
+  if (first_frame_)
+  {
+    ROS_INFO("OK Got first image. Running...");
+    first_frame_ = false;
+    parent_frameid = msg->header.frame_id;
+  }
 
-	//track the april tag and publish the tf
+  //track the april tag and publish the tf
 
-	static helper::PerformanceMeasurer PM;
+  static helper::PerformanceMeasurer PM;
 
-	vector<TagDetection> detections;
+  vector<TagDetection> detections;
 
-	if(last_cam_info_msg_.get() == NULL){
-		ROS_WARN_STREAM_THROTTLE(2,"Did not receive valid camera info message up to now. Did you remap the camera info topic? Discarding image!");
-		return;
-	}
+  if (last_cam_info_msg_.get() == NULL)
+  {
+    ROS_WARN_STREAM_THROTTLE(
+        2,
+        "Did not receive valid camera info message up to now. Did you remap the camera info topic? Discarding image!");
+    return;
+  }
 
-	double opticalCenter[2] = { last_cam_info_msg_->P[2], last_cam_info_msg_->P[6] };
-	PM.tic();
+  double opticalCenter[2] = {last_cam_info_msg_->P[2], last_cam_info_msg_->P[6]};
+  PM.tic();
 
-	namespace enc = sensor_msgs::image_encodings;
+  namespace enc = sensor_msgs::image_encodings;
 
-	cv::Mat img(msg->height, msg->width, CV_8U, const_cast<uint8_t*>(&(msg->data[0])));
+  cv::Mat img(msg->height, msg->width, CV_8U, const_cast<uint8_t*>(&(msg->data[0])));
 
-	detector->process(img, opticalCenter, detections);
+  detector->process(img, opticalCenter, detections);
 
-	tf::Transform mostStableTransform;
-	double largestObservedPerimeter = 0;
+  tf::Transform mostStableTransform;
+  double largestObservedPerimeter = 0;
 
-	BOOST_FOREACH(TagDetection& dd, detections){
-		if(dd.hammingDistance>0) continue; //better not publish a tf, than publishing the one of a wrong tag
+  BOOST_FOREACH(TagDetection& dd, detections){
+  if(dd.hammingDistance>0) continue; //better not publish a tf, than publishing the one of a wrong tag
 
-		Eigen::Matrix3d tmp((double*)dd.homography[0]);
-		Eigen::Matrix3d H = tmp.transpose();
+  Eigen::Matrix3d tmp((double*)dd.homography[0]);
+  Eigen::Matrix3d H = tmp.transpose();
 
-		//read for currently detected tag, abort processing, if there are no parameters
-		if(fixparams->_AprilTags.count(dd.id)==0){
-			ROS_WARN("Detected Tag with ID %i but you no parameters were loaded for this tag! Please check the parameters file", dd.id);
-			continue;
-		}
+  //read for currently detected tag, abort processing, if there are no parameters
+  if(fixparams->_AprilTags.count(dd.id)==0)
+  {
+    ROS_WARN("Detected Tag with ID %i but you no parameters were loaded for this tag! Please check the parameters file", dd.id);
+    continue;
+  }
 
-		AprilTagProperties& tagproperties = fixparams->_AprilTags[dd.id];
+  AprilTagProperties& tagproperties = fixparams->_AprilTags[dd.id];
 
-		tf::Transform tf_tagfromcam = homographyToPose(
-				last_cam_info_msg_->P[0], last_cam_info_msg_->P[5], tagproperties.scale, last_cam_info_msg_->P[2], last_cam_info_msg_->P[6], H);
+  tf::Transform tf_tagfromcam = homographyToPose(
+      last_cam_info_msg_->P[0], last_cam_info_msg_->P[5], tagproperties.scale, last_cam_info_msg_->P[2], last_cam_info_msg_->P[6], H);
 
-		//add tag transform
-		const tf::Transform& tagFromWorld = tagproperties.transform;
-		tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse();
-		//tf::Transform transform = tf_tagfromcam * tagFromWorld.inverse();
+  //add tag transform
+  const tf::Transform& tagFromWorld = tagproperties.transform;
+  tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse();
+  //tf::Transform transform = tf_tagfromcam * tagFromWorld.inverse();
 
+  //publish
+  std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
+  //		publishPoseAndTf(transform, frameid);
 
-		//publish
-		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
-		//		publishPoseAndTf(transform, frameid);
+  //store best, which we assume to be the pose with the largest appearance in the image
+  if(dd.observedPerimeter>largestObservedPerimeter && dd.observedPerimeter > ParamsAccess::varParams->min_observed_tag_size * 4)
+  { //size to perimeter
+    mostStableTransform = transform;
+    largestObservedPerimeter = dd.observedPerimeter;
+  }
+}
 
-		//store best, which we assume to be the pose with the largest appearance in the image
-		if(dd.observedPerimeter>largestObservedPerimeter && dd.observedPerimeter > ParamsAccess::varParams->min_observed_tag_size * 4){ //size to perimeter
-			mostStableTransform = transform;
-			largestObservedPerimeter = dd.observedPerimeter;
-		}
-	}
+//	tf::Quaternion quat(tf::Vector3(0,0,1),-45./180.*M_PI);
+//	std::cout<<"quat "<<quat.getX()<<" "<<quat.getY()<<" "<<quat.getZ()<<" "<<quat.getW()<<std::endl;
 
-	//	tf::Quaternion quat(tf::Vector3(0,0,1),-45./180.*M_PI);
-	//	std::cout<<"quat "<<quat.getX()<<" "<<quat.getY()<<" "<<quat.getZ()<<" "<<quat.getW()<<std::endl;
+//only publish if there is valid transform
+  if (largestObservedPerimeter > 0)
+  {
+    std::string frameid = "/april_fix";
+    //publish best
+    publishPoseAndTf(mostStableTransform, frameid, largestObservedPerimeter);
+  }
 
-	//only publish if there is valid transform
-	if(largestObservedPerimeter>0){
-		std::string frameid = "/april_fix";
-		//publish best
-		publishPoseAndTf(mostStableTransform, frameid, largestObservedPerimeter);
-	}
-
-	//some debugging tools
+  //some debugging tools
 #if TAG_DEBUG_DRAW
-	loglni("[TagDetector] process time = "<<PM.toc()<<" sec.");
+  loglni("[TagDetector] process time = "<<PM.toc()<<" sec.");
 
-	logi(">>> find id: ");
-	for(int id=0; id<(int)detections.size(); ++id) {
-		TagDetection &dd = detections[id];
-		if(dd.hammingDistance>2) continue;
+  logi(">>> find id: ");
+  for (int id = 0; id < (int)detections.size(); ++id)
+  {
+    TagDetection &dd = detections[id];
+    if (dd.hammingDistance > 2)
+      continue;
 
-		logi("#"<<dd.id<<"|"<<dd.hammingDistance<<" ");
-		cv::putText( img, helper::num2str(dd.id), cv::Point(dd.cxy[0],dd.cxy[1]), CV_FONT_NORMAL, 1, helper::CV_BLUE, 2 );
+    logi("#"<<dd.id<<"|"<<dd.hammingDistance<<" ");
+    cv::putText(img, helper::num2str(dd.id), cv::Point(dd.cxy[0], dd.cxy[1]), CV_FONT_NORMAL, 1, helper::CV_BLUE, 2);
 
-		cv::Mat tmp(3,3,CV_64FC1, (double*)dd.homography[0]);
-		double vm[] = {1,0,dd.hxy[0],0,1,dd.hxy[1],0,0,1};
-		cv::Mat Homo = cv::Mat(3,3,CV_64FC1,vm) * tmp;
-		static double crns[4][2]={
-				{-1, -1},
-				{ 1, -1},
-				{ 1,  1},
-				{-1,  1}
-		};
-		helper::drawHomography(img, Homo, crns);
-	}
-	logi(endl);
-
+    cv::Mat tmp(3, 3, CV_64FC1, (double*)dd.homography[0]);
+    double vm[] = {1, 0, dd.hxy[0], 0, 1, dd.hxy[1], 0, 0, 1};
+    cv::Mat Homo = cv::Mat(3, 3, CV_64FC1, vm) * tmp;
+    static double crns[4][2] = { {-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
+    helper::drawHomography(img, Homo, crns);
+  }
+  logi(endl);
 
 #if TAG_DEBUG_PERFORMANCE
-	static int barH = 30;
-	static int textH = 12;
-	static vector<cv::Scalar> pclut = helper::pseudocolor(10);
-	//draw performance bar
-	double total = 0;
-	for(int i=0; i<9; ++i) {
-		total += detector->steptime[i];
-	}
-	int lastx=0;
-	int lasty=barH+textH;
-	for(int i=0; i<9; ++i) {
-		double thisx = (detector->steptime[i]/total)*imgW+lastx;
-		cv::rectangle(img, cv::Point(lastx,0), cv::Point(thisx,barH), pclut[i], CV_FILLED);
-		lastx = thisx;
-		cv::putText(img, cv::format("step %d: %05.3f ms",i+1,detector->steptime[i]),
-				cv::Point(5,lasty-2), CV_FONT_NORMAL, 0.5, pclut[i], 1 );
-		lasty += textH;
-	}
-	cv::putText(img, cv::format("fps=%4.3lf",1000.0/total), cv::Point(imgW/2,barH), CV_FONT_NORMAL, 1, helper::CV_BLUE, 1);
-	loglnd("-------------------------------");
+  static int barH = 30;
+  static int textH = 12;
+  static vector<cv::Scalar> pclut = helper::pseudocolor(10);
+  //draw performance bar
+  double total = 0;
+  for (int i = 0; i < 9; ++i)
+  {
+    total += detector->steptime[i];
+  }
+  int lastx = 0;
+  int lasty = barH + textH;
+  for (int i = 0; i < 9; ++i)
+  {
+    double thisx = (detector->steptime[i] / total) * imgW + lastx;
+    cv::rectangle(img, cv::Point(lastx, 0), cv::Point(thisx, barH), pclut[i], CV_FILLED);
+    lastx = thisx;
+    cv::putText(img, cv::format("step %d: %05.3f ms", i + 1, detector->steptime[i]), cv::Point(5, lasty - 2),
+                CV_FONT_NORMAL, 0.5, pclut[i], 1);
+    lasty += textH;
+  }
+  cv::putText(img, cv::format("fps=%4.3lf", 1000.0 / total), cv::Point(imgW / 2, barH), CV_FONT_NORMAL, 1,
+              helper::CV_BLUE, 1);
+  loglnd("-------------------------------");
 #endif
 
-	imshow("april", img);
-	cv::waitKey(1);
+  imshow("april", img);
+  cv::waitKey(1);
 #endif
 
 }
 
-AprilInterface::~AprilInterface() {
+AprilInterface::~AprilInterface()
+{
 }
 
