@@ -105,12 +105,11 @@ struct TagFamily {
 
 	/** The codes array is not copied internally and so must not be
 	 * modified externally. **/
-	TagFamily(int bits_, int minimumHammingDistance_, vector<INT64> codes_):
-		whiteBorder(1), blackBorder(1), errorRecoveryBits(1),
-		bits(bits_), d((int)sqrt((float)bits)), codes(codes_),
-		minimumHammingDistance(minimumHammingDistance_) {
-		assert(d *d == bits);
-	}
+        TagFamily(int bits_, int minimumHammingDistance_, vector<INT64> codes_) :
+            whiteBorder(1), blackBorder(1), bits(bits_), d((int)sqrt((float)bits)),
+            minimumHammingDistance(minimumHammingDistance_), errorRecoveryBits(1), codes(codes_){
+          assert(d *d == bits);
+        }
 
 	void setErrorRecoveryBits(int b) {
 		errorRecoveryBits = b;
