@@ -1,7 +1,8 @@
 <launch>
     <node name="AprilROSNode" pkg="roscpp_apriltag" type="AprilROSNode" clear_params="true" output="screen">
 	    <remap from="image" to="$(optenv IMAGE /camera/image_raw)" />
-        	<remap from="pose" to="pose"/>
+	    <remap from="camera_info" to="$(optenv CAMERA_INFO /camera/camera_info)" />
+            <remap from="pose" to="pose"/>
 	    <rosparam file="$(find roscpp_apriltag)/FixParams.yaml"/>
     </node>
 </launch>

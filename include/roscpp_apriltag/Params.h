@@ -33,10 +33,10 @@ typedef std::map<int, AprilTagProperties> TagMap_T;
 class FixParams
 {
 public:
-	double _focalLengthX;
-	double _focalLengthY;
-	double _imageCenterX;
-	double _imageCenterY;
+//	double _focalLengthX;
+//	double _focalLengthY;
+//	double _imageCenterX;
+//	double _imageCenterY;
 	int _tagFamilyID;
 	TagMap_T _AprilTags;
 

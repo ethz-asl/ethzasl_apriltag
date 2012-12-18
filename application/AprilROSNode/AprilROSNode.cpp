@@ -52,9 +52,17 @@ AprilROSNode::AprilROSNode() : nh_("AprilTracker"), image_nh_(""), first_frame_(
 				"\t$ ./AprilROSNode image:=<image topic>");
 	}
 
+	std::string topic_info = image_nh_.resolveName("camera_info");
+	if (topic_info == "/camera_info")
+	{
+		ROS_WARN("info source: cam info has not been remapped! Typical command-line usage:\n"
+				"\t$ ./AprilROSNode camera_info:=<info topic>");
+	}
+
 	image_transport::ImageTransport it(image_nh_);
 	sub_image_ = it.subscribe(topic, 1, &AprilROSNode::imageCallback, this, image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
 
+	cam_info_sub_ = image_nh_.subscribe(topic_info, 1, &AprilROSNode::cameraInfoCallback, this);
 
 	pub_posewcov_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped> ("posewcov", 1);
 	pub_pose_ = nh_.advertise<geometry_msgs::PoseStamped> ("pose", 1);
@@ -265,7 +273,7 @@ tf::Quaternion AprilROSNode::projectionMatrixToQuaternion(Eigen::Matrix4d& M)  c
 	return tf::Quaternion(1,0,0,0) * tf::Quaternion(qx, qy, qz, qw); // camera looks towards tag
 }
 
-void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter) const{
+void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter){
 	//put together a ROS pose
 	tf::Quaternion tfQuat = transform.getRotation();
 	tf::Vector3 tfTrans = transform.getOrigin();
@@ -321,6 +329,9 @@ void AprilROSNode::publishPoseAndTf(const tf::Transform& transform, std::string 
 	tf_pub_.sendTransform(transform_msg);
 }
 
+void AprilROSNode::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& msg){
+	last_cam_info_msg_ = msg; //cache latest cam info
+}
 
 void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
@@ -338,7 +349,13 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 	static helper::PerformanceMeasurer PM;
 
 	vector<TagDetection> detections;
-	double opticalCenter[2] = { fixparams->_imageCenterX, fixparams->_imageCenterY };
+
+	if(last_cam_info_msg_.get() == NULL){
+		ROS_WARN_STREAM_THROTTLE(2,"Did not recieve valid camera info message up to now. Did you remap the camera info topic? Discarding image!");
+		return;
+	}
+
+	double opticalCenter[2] = { last_cam_info_msg_->P[2], last_cam_info_msg_->P[6] };
 	PM.tic();
 
 	namespace enc = sensor_msgs::image_encodings;
@@ -365,13 +382,13 @@ void AprilROSNode::imageCallback(const sensor_msgs::ImageConstPtr & msg){
 		AprilTagProperties& tagproperties = fixparams->_AprilTags[dd.id];
 
 		tf::Transform tf_tagfromcam = homographyToPose(
-				fixparams->_focalLengthX, fixparams->_focalLengthY, tagproperties.scale, fixparams->_imageCenterX, fixparams->_imageCenterY, H);
+				last_cam_info_msg_->P[0], last_cam_info_msg_->P[5], tagproperties.scale, last_cam_info_msg_->P[2], last_cam_info_msg_->P[6], H);
 
 		//add tag transform
 		const tf::Transform& tagFromWorld = tagproperties.transform;
-	    tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse();
+		tf::Transform transform = (tagFromWorld * tf_tagfromcam.inverse()).inverse();
 		//tf::Transform transform = tf_tagfromcam * tagFromWorld.inverse();
-	
+
 
 		//publish
 		std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);

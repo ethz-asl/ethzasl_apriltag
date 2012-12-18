@@ -13,10 +13,10 @@ void FixParams::readFixParams()
 {
 	ros::NodeHandle nh("~");
 
-	nh.param("focal_length_x", _focalLengthX, 614.0);
-	nh.param("focal_length_y", _focalLengthY, 614.4);
-	nh.param("image_center_x", _imageCenterX, 376.0);
-	nh.param("image_center_y", _imageCenterY, 240.0);
+//	nh.param("focal_length_x", _focalLengthX, 614.0);
+//	nh.param("focal_length_y", _focalLengthY, 614.4);
+//	nh.param("image_center_x", _imageCenterX, 376.0);
+//	nh.param("image_center_y", _imageCenterY, 240.0);
 	nh.param("tag_family_id", _tagFamilyID, 4);
 
 	ROS_INFO("parsing parameters for tag properties");
