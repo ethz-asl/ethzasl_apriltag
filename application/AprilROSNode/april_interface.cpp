@@ -282,7 +282,7 @@ tf::Quaternion AprilInterface::projectionMatrixToQuaternion(Eigen::Matrix4d& M) 
   return tf::Quaternion(1, 0, 0, 0) * tf::Quaternion(qx, qy, qz, qw); // camera looks towards tag
 }
 
-void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::string frameid,
+void AprilInterface::publishPoseAndTf(const tf::Transform& transform, double timestamp, std::string frameid,
                                       double largestObservedPerimeter)
 {
   //put together a ROS pose
@@ -317,7 +317,7 @@ void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::strin
   std_msgs::Header header;
   header.frame_id = frameid;
   header.seq = seq_number_++;
-  header.stamp = ros::Time::now();
+  header.stamp = ros::Time(timestamp);
   poseCovStPtr->header = header;
 
   header.frame_id = parent_frameid;
@@ -329,7 +329,7 @@ void AprilInterface::publishPoseAndTf(const tf::Transform& transform, std::strin
   transform_msg.setOrigin(tfTrans);
   transform_msg.frame_id_ = parent_frameid;
   transform_msg.child_frame_id_ = frameid;
-  transform_msg.stamp_ = ros::Time::now();
+  transform_msg.stamp_ = header.stamp;
   tf_pub_.sendTransform(transform_msg);
 }
 
@@ -420,7 +420,7 @@ void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
   {
     std::string frameid = "/april_fix";
     //publish best
-    publishPoseAndTf(mostStableTransform, frameid, largestObservedPerimeter);
+    publishPoseAndTf(mostStableTransform, msg->header.stamp.toSec(), frameid, largestObservedPerimeter);
   }
 
   //some debugging tools

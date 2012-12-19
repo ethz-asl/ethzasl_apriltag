@@ -50,7 +50,7 @@ private:
   tf::Quaternion projectionMatrixToQuaternion(Eigen::Matrix4d& M) const;
   tf::Transform homographyToPose(double fx, double fy, double scale, double cx, double cy,
                                  const Eigen::Matrix<double, 3, 3>& H) const;
-  void publishPoseAndTf(const tf::Transform& transform, std::string frameid, double largestObservedPerimeter);
+  void publishPoseAndTf(const tf::Transform& transform, double timestamp, std::string frameid, double largestObservedPerimeter);
 public:
   AprilInterface();
   virtual ~AprilInterface();
