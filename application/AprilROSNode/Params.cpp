@@ -5,7 +5,7 @@
  *      Author: slynen
  */
 
-#include <roscpp_apriltag/Params.h>
+#include <ethzasl_apriltag/Params.h>
 
 ParamsAccess params_obj;
 
@@ -74,5 +74,5 @@ void FixParams::readFixParams()
 }
 ;
 
-roscpp_apriltag::roscpp_apriltagConfig* ParamsAccess::varParams;
+ethzasl_apriltag::ethzasl_apriltagConfig* ParamsAccess::varParams;
 FixParams* ParamsAccess::fixParams;

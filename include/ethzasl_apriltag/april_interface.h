@@ -22,7 +22,7 @@
 
 #include "OpenCVHelper.h"
 #include "Log.h"
-#include <roscpp_apriltag/Params.h>
+#include <ethzasl_apriltag/Params.h>
 #include <Eigen/Dense>
 
 #include <sensor_msgs/CameraInfo.h>

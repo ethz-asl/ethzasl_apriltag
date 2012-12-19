@@ -6,7 +6,7 @@ bin
 build
 .cproject
 .project
-src/roscpp_apriltag/cfg/*
+src/ethzasl_apriltag/cfg/*
 docs
 
 # Compiled Dynamic libraries

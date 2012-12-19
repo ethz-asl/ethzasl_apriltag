@@ -8,7 +8,7 @@
 #define TAG_DEBUG_PERFORMANCE 0
 #define TAG_DEBUG_DRAW 0
 
-#include "roscpp_apriltag/april_interface.h"
+#include "ethzasl_apriltag/april_interface.h"
 #include "apriltag/apriltag.hpp"
 #include "apriltag/TagFamilyFactory.hpp"
 #include <image_transport/image_transport.h>

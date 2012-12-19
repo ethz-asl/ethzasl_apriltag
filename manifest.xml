@@ -1,13 +1,13 @@
 <package>
-  <description brief="roscpp_apriltag">
+  <description brief="ethzasl_apriltag">
 
-     roscpp_apriltag
+     ethzasl_apriltag
 
   </description>
   <author>Simon Lynen</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/roscpp_apriltag</url>
+  <url>http://ros.org/wiki/ethzasl_apriltag</url>
   <depend package="roscpp"/>
   <depend package="std_msgs"/>
 

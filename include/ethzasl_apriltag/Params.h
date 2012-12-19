@@ -13,14 +13,14 @@
 #include <XmlRpcValue.h>
 
 #include <dynamic_reconfigure/server.h>
-#include <roscpp_apriltag/roscpp_apriltagConfig.h>
+#include <ethzasl_apriltag/ethzasl_apriltagConfig.h>
 #include <Eigen/Dense>
 #include <tf/tf.h>
 
-typedef roscpp_apriltag::roscpp_apriltagConfig varParamsT;
+typedef ethzasl_apriltag::ethzasl_apriltagConfig varParamsT;
 
-typedef dynamic_reconfigure::Server<varParamsT> roscpp_apriltagParamsReconfigureServer;
-typedef roscpp_apriltag::roscpp_apriltagConfig VarParams;
+typedef dynamic_reconfigure::Server<varParamsT> ethzasl_apriltagParamsReconfigureServer;
+typedef ethzasl_apriltag::ethzasl_apriltagConfig VarParams;
 
 struct AprilTagProperties{
 	int id;
@@ -59,22 +59,22 @@ public:
 	static FixParams* fixParams;
 };
 
-class roscpp_apriltagParameters{
+class ethzasl_apriltagParameters{
 private:
 	varParamsT mVarParams;
 	FixParams mFixParams;
 
-	roscpp_apriltagParamsReconfigureServer *mroscpp_apriltagParamsReconfigureServer;
+	ethzasl_apriltagParamsReconfigureServer *methzasl_apriltagParamsReconfigureServer;
 
-	void roscpp_apriltagConfig(varParamsT & config, uint32_t level){
+	void ethzasl_apriltagConfig(varParamsT & config, uint32_t level){
 		mVarParams = config;
 	};
 public:
-	roscpp_apriltagParameters()
+	ethzasl_apriltagParameters()
 	{
-		mroscpp_apriltagParamsReconfigureServer = new roscpp_apriltagParamsReconfigureServer(ros::NodeHandle("~"));
-		roscpp_apriltagParamsReconfigureServer::CallbackType roscpp_apriltagParamCall = boost::bind(&roscpp_apriltagParameters::roscpp_apriltagConfig, this, _1, _2);
-		mroscpp_apriltagParamsReconfigureServer->setCallback(roscpp_apriltagParamCall);
+		methzasl_apriltagParamsReconfigureServer = new ethzasl_apriltagParamsReconfigureServer(ros::NodeHandle("~"));
+		ethzasl_apriltagParamsReconfigureServer::CallbackType ethzasl_apriltagParamCall = boost::bind(&ethzasl_apriltagParameters::ethzasl_apriltagConfig, this, _1, _2);
+		methzasl_apriltagParamsReconfigureServer->setCallback(ethzasl_apriltagParamCall);
 
 		mFixParams.readFixParams();
 
