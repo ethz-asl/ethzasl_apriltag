@@ -340,7 +340,32 @@ void AprilInterface::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& m
 
 void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
 {
-  ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
+
+if(msg->encoding != sensor_msgs::image_encodings::MONO8)
+{
+
+
+cv_bridge::CvImagePtr cv_ptr;
+
+try
+{
+cv_ptr= cv_bridge::toCvCopy(msg,sensor_msgs::image_encodings::MONO8);
+}
+catch(cv_bridge::Exception e)
+{
+ROS_ERROR("cv_bridge exception: %s",e.what());
+return;
+}
+
+msg = cv_ptr->toImageMsg();
+
+
+}
+
+
+ ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
+
+
 
   FixParams* fixparams = ParamsAccess::fixParams;
 
@@ -401,7 +426,9 @@ void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
   //tf::Transform transform = tf_tagfromcam * tagFromWorld.inverse();
 
   //publish
+
   std::string frameid = "/tag_"+boost::lexical_cast<std::string>(dd.id);
+
   //		publishPoseAndTf(transform, frameid);
 
   //store best, which we assume to be the pose with the largest appearance in the image
@@ -409,6 +436,7 @@ void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
   { //size to perimeter
     mostStableTransform = transform;
     largestObservedPerimeter = dd.observedPerimeter;
+
   }
 }
 
@@ -421,6 +449,7 @@ void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
     std::string frameid = "/april_fix";
     //publish best
     publishPoseAndTf(mostStableTransform, msg->header.stamp.toSec(), frameid, largestObservedPerimeter);
+
   }
 
   //some debugging tools
