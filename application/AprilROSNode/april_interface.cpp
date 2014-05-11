@@ -422,7 +422,6 @@ void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
   { //size to perimeter
     mostStableTransform = transform;
     largestObservedPerimeter = dd.observedPerimeter;
-
   }
 }
 
@@ -435,7 +434,6 @@ void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
     std::string frameid = "/april_fix";
     //publish best
     publishPoseAndTf(mostStableTransform, msg->header.stamp.toSec(), frameid, largestObservedPerimeter);
-
   }
 
   //some debugging tools
