@@ -340,23 +340,16 @@ void AprilInterface::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& m
 
 void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
 {
-
-  if(msg->encoding != sensor_msgs::image_encodings::MONO8)
+  cv_bridge::CvImagePtr cv_ptr;
+  try
   {
-    cv_bridge::CvImagePtr cv_ptr;
-    try
-    {
-      cv_ptr= cv_bridge::toCvCopy(msg,sensor_msgs::image_encodings::MONO8);
-    }
-    catch(cv_bridge::Exception e)
-    {
-      ROS_ERROR("cv_bridge exception: %s",e.what());
-      return;
-    }
-    msg = cv_ptr->toImageMsg();
+     cv_ptr= cv_bridge::toCvCopy(msg,sensor_msgs::image_encodings::MONO8);
   }
-
-  ROS_ASSERT(msg->encoding == sensor_msgs::image_encodings::MONO8 && msg->step == msg->width);
+  catch(cv_bridge::Exception e)
+  {
+     ROS_ERROR("cv_bridge exception: %s",e.what());
+     return;
+  }
 
   FixParams* fixparams = ParamsAccess::fixParams;
 
@@ -386,8 +379,7 @@ void AprilInterface::imageCallback(const sensor_msgs::ImageConstPtr & msg)
 
   namespace enc = sensor_msgs::image_encodings;
 
-  cv::Mat img(msg->height, msg->width, CV_8U, const_cast<uint8_t*>(&(msg->data[0])));
-  detector->process(img, opticalCenter, detections);
+  detector->process(cv_ptr->image, opticalCenter, detections);
 
   tf::Transform mostStableTransform;
   double largestObservedPerimeter = 0;
